@@ -92,8 +92,8 @@ export default function AgentsPage() {
     }
 
     const agentData = {
-      name: nameVal.sanitizedValue,
-      systemPrompt: promptVal.sanitizedValue,
+      name: nameVal.sanitizedValue ?? name.trim(),
+      systemPrompt: promptVal.sanitizedValue ?? systemPrompt.trim(),
       llmProvider,
       llmModel,
       enabledTools,
