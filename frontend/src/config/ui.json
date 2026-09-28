@@ -1,10 +1,10 @@
 {
   "navigation": [
-    { "title": "Dashboard", "href": "/", "icon": "LayoutDashboard" },
-    { "title": "Agent Studio", "href": "/agents", "icon": "Bot" },
-    { "title": "Voice Playground", "href": "/playground", "icon": "Mic" },
-    { "title": "Knowledge Base (RAG)", "href": "/documents", "icon": "FileText" },
-    { "title": "Memory Vault", "href": "/memory", "icon": "Brain" }
+    { "title": "Home", "href": "/", "icon": "LayoutDashboard" },
+    { "title": "Agents", "href": "/agents", "icon": "Bot" },
+    { "title": "Chat", "href": "/playground", "icon": "Mic" },
+    { "title": "Documents", "href": "/documents", "icon": "FileText" },
+    { "title": "Memory", "href": "/memory", "icon": "Brain" }
   ],
   "visualizer": {
     "barCount": 32,

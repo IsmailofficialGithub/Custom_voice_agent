@@ -10,7 +10,7 @@ export function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-3 max-w-md w-full px-4 pointer-events-none">
+    <div className="pointer-events-none fixed right-4 top-4 z-50 flex w-full max-w-sm flex-col gap-2 px-2">
       {toasts.map((toast) => {
         const isError = toast.type === 'error';
         const isSuccess = toast.type === 'success';
@@ -19,40 +19,30 @@ export function ToastContainer() {
         return (
           <div
             key={toast.id}
-            className={`pointer-events-auto p-4 rounded-xl border backdrop-blur-md shadow-2xl transition-all duration-300 transform translate-y-0 ${
-              isError
-                ? 'bg-rose-950/80 border-rose-500/50 text-rose-200'
-                : isSuccess
-                ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-200'
-                : isWarning
-                ? 'bg-amber-950/80 border-amber-500/50 text-amber-200'
-                : 'bg-slate-900/90 border-slate-700 text-slate-200'
-            }`}
+            className="pointer-events-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 shadow-xl"
           >
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 shrink-0">
-                {isError && <AlertCircle className="w-5 h-5 text-rose-400 animate-pulse" />}
-                {isSuccess && <CheckCircle2 className="w-5 h-5 text-emerald-400" />}
-                {isWarning && <AlertTriangle className="w-5 h-5 text-amber-400" />}
-                {!isError && !isSuccess && !isWarning && <Info className="w-5 h-5 text-sky-400" />}
+            <div className="flex items-start gap-2.5">
+              <div className="mt-0.5 shrink-0 text-[var(--text-muted)]">
+                {isError && <AlertCircle className="h-4 w-4 text-[var(--danger)]" />}
+                {isSuccess && <CheckCircle2 className="h-4 w-4 text-[var(--ok)]" />}
+                {isWarning && <AlertTriangle className="h-4 w-4 text-[var(--warn)]" />}
+                {!isError && !isSuccess && !isWarning && <Info className="h-4 w-4" />}
               </div>
-
-              <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-sm tracking-wide">{toast.title}</h4>
-                <p className="text-xs mt-1 leading-relaxed opacity-90">{toast.message}</p>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-sm font-medium text-[var(--text)]">{toast.title}</h4>
+                <p className="mt-0.5 text-xs leading-relaxed text-[var(--text-muted)]">{toast.message}</p>
                 {toast.actionableHint && (
-                  <div className="mt-2 pt-2 border-t border-white/10 text-[11px] font-medium text-amber-300/90 flex items-center gap-1.5">
-                    <span>💡 Hint:</span>
-                    <span>{toast.actionableHint}</span>
-                  </div>
+                  <p className="mt-2 border-t border-[var(--border)] pt-2 text-[11px] text-[var(--text-faint)]">
+                    {toast.actionableHint}
+                  </p>
                 )}
               </div>
-
               <button
+                type="button"
                 onClick={() => dismissToast(toast.id)}
-                className="shrink-0 p-1 hover:bg-white/10 rounded-lg transition-colors text-white/60 hover:text-white"
+                className="rounded p-1 text-[var(--text-faint)] hover:bg-[var(--bg)] hover:text-[var(--text)]"
               >
-                <X className="w-4 h-4" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>

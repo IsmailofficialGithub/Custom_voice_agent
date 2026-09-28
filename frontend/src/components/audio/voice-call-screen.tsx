@@ -268,30 +268,30 @@ export function VoiceCallScreen({
         <div className="relative flex h-44 w-44 items-center justify-center">
           <div
             className={`absolute rounded-full transition-all duration-300 ${
-              callState === 'speaking' ? 'bg-emerald-400/20' : callState === 'user_speaking' ? 'bg-cyan-400/20' : 'bg-slate-500/10'
+              callState === 'speaking' || callState === 'user_speaking' ? 'bg-white/10' : 'bg-white/5'
             }`}
             style={{ width: `${140 + audioLevel * 0.9}px`, height: `${140 + audioLevel * 0.9}px` }}
           />
           <div
-            className={`relative flex h-28 w-28 items-center justify-center rounded-full shadow-xl transition-transform duration-150 ${
+            className={`relative flex h-28 w-28 items-center justify-center rounded-full transition-transform duration-150 ${
               callState === 'speaking'
-                ? 'bg-gradient-to-br from-emerald-400 to-teal-600'
+                ? 'bg-[var(--text)] text-[var(--bg)]'
                 : callState === 'user_speaking'
-                  ? 'bg-gradient-to-br from-cyan-400 to-sky-600'
+                  ? 'bg-[var(--text-muted)] text-[var(--bg)]'
                   : callState === 'thinking' || callState === 'transcribing'
-                    ? 'animate-pulse bg-gradient-to-br from-slate-600 to-slate-800'
+                    ? 'animate-pulse bg-[var(--surface)] text-[var(--text)]'
                     : isMuted
-                      ? 'border border-rose-500/40 bg-slate-800'
-                      : 'border border-white/15 bg-gradient-to-br from-slate-700 to-slate-900'
+                      ? 'border border-[var(--danger)] bg-[var(--surface)] text-[var(--danger)]'
+                      : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]'
             }`}
             style={{ transform: `scale(${orbScale})` }}
           >
             {callState === 'speaking' ? (
-              <Volume2 className="h-9 w-9 text-white" />
+              <Volume2 className="h-9 w-9" />
             ) : isMuted ? (
-              <MicOff className="h-9 w-9 text-rose-300" />
+              <MicOff className="h-9 w-9" />
             ) : (
-              <Mic className="h-9 w-9 text-cyan-100" />
+              <Mic className="h-9 w-9" />
             )}
           </div>
         </div>

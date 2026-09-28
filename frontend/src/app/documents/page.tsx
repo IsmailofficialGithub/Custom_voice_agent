@@ -7,18 +7,8 @@ import { useAuth } from '../../context/auth-context';
 import { useToast } from '../../context/toast-context';
 import { apiClient, Agent, DocumentItem } from '../../lib/api-client';
 import { validatePdfFile } from '../../lib/validator';
-import {
-  FileText,
-  UploadCloud,
-  Trash2,
-  Bot,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  RefreshCw,
-  Mic,
-  ArrowRightLeft,
-} from 'lucide-react';
+import { Loading, EmptyState } from '../../components/ui/loading';
+import { FileText, Trash2, Mic, ArrowRightLeft, RefreshCw } from 'lucide-react';
 
 function DocumentsContent() {
   const { apiKey } = useAuth();
@@ -27,7 +17,7 @@ function DocumentsContent() {
   const prefillAgentId = searchParams.get('agentId') || '';
 
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [selectedAgentId, setSelectedAgentId] = useState<string>('');
+  const [selectedAgentId, setSelectedAgentId] = useState('');
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -47,9 +37,7 @@ function DocumentsContent() {
       const list = await apiClient.getAgents(apiKey);
       setAgents(list);
       const pick =
-        (prefillAgentId && list.find((a) => a.id === prefillAgentId)?.id) ||
-        list[0]?.id ||
-        '';
+        (prefillAgentId && list.find((a) => a.id === prefillAgentId)?.id) || list[0]?.id || '';
       setSelectedAgentId(pick);
     } catch (err) {
       showError(err, 'Load Agents');
@@ -76,27 +64,24 @@ function DocumentsContent() {
       return;
     }
     if (!selectedAgentId) {
-      showError('Select an agent to assign this document to.', 'Upload');
+      showError('Select an agent.', 'Upload');
       return;
     }
     const val = validatePdfFile(file);
     if (!val.isValid) {
-      showError(val.error, 'File Upload');
+      showError(val.error, 'Upload');
       return;
     }
-
     setUploading(true);
     try {
       const uploaded = await apiClient.uploadDocument(selectedAgentId, file, apiKey);
-      showSuccess(
-        'Assigned & uploaded',
-        `"${uploaded.filename}" → only ${selectedAgent?.name || 'this agent'} can read it.`,
-      );
+      showSuccess('Uploaded', `Assigned to ${selectedAgent?.name}`);
       setFile(null);
       await loadAgents();
       loadDocuments(selectedAgentId);
+      void uploaded;
     } catch (err) {
-      showError(err, 'PDF Upload');
+      showError(err, 'Upload');
     } finally {
       setUploading(false);
     }
@@ -109,7 +94,7 @@ function DocumentsContent() {
       showSuccess('Deleted', filename);
       loadDocuments(selectedAgentId);
     } catch (err) {
-      showError(err, 'Delete Document');
+      showError(err, 'Delete');
     }
   };
 
@@ -119,13 +104,13 @@ function DocumentsContent() {
       return;
     }
     const target = agents.find((a) => a.id === newAgentId);
-    if (!confirm(`Move “${filename}” to ${target?.name}? Only that agent will be able to read it.`)) {
+    if (!confirm(`Move “${filename}” to ${target?.name}?`)) {
       setReassigningId(null);
       return;
     }
     try {
       await apiClient.reassignDocument(docId, newAgentId, apiKey);
-      showSuccess('Reassigned', `Now only ${target?.name} can access this PDF.`);
+      showSuccess('Moved', target?.name || '');
       setReassigningId(null);
       setSelectedAgentId(newAgentId);
     } catch (err) {
@@ -135,73 +120,46 @@ function DocumentsContent() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 pb-12">
+    <div className="ui-page space-y-6">
       <div>
-        <h1 className="flex items-center gap-2 text-2xl font-black text-slate-100">
-          <FileText className="h-6 w-6 text-purple-400" />
-          Documents
-        </h1>
-        <p className="mt-1 text-xs text-slate-400">
-          Upload a PDF and assign it to one agent. Only that agent can search and answer from it.
-        </p>
+        <h1 className="ui-title">Documents</h1>
+        <p className="ui-subtitle">Upload a PDF and assign it to one agent. Only that agent can read it.</p>
       </div>
 
-      {/* Upload + assign card */}
-      <div className="glass-panel space-y-5 rounded-3xl border border-white/10 p-6 sm:p-8">
-        <div className="flex items-start gap-3">
-          <div className="rounded-xl bg-purple-500/20 p-3 text-purple-300">
-            <UploadCloud className="h-6 w-6" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-slate-100">Upload & assign</h2>
-            <p className="mt-0.5 text-xs text-slate-400">
-              Step 1: pick agent → Step 2: choose PDF → Upload
-            </p>
-          </div>
-        </div>
+      <section className="space-y-4 rounded-lg border border-[var(--border)] p-5">
+        <h2 className="text-sm font-semibold text-[var(--text)]">Upload & assign</h2>
 
         <div>
-          <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-slate-300">
-            <Bot className="h-3.5 w-3.5" />
-            Assign to agent *
-          </label>
+          <label className="ui-label">Agent</label>
           <select
+            className="ui-input"
             value={selectedAgentId}
             onChange={(e) => setSelectedAgentId(e.target.value)}
-            className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2.5 text-sm text-slate-100 focus:border-purple-500 focus:outline-none"
           >
-            {agents.length === 0 && <option value="">No agents — create one first</option>}
+            {agents.length === 0 && <option value="">Create an agent first</option>}
             {agents.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
               </option>
             ))}
           </select>
-          <p className="mt-1.5 text-[11px] text-slate-500">
-            Only <span className="font-semibold text-slate-300">{selectedAgent?.name || '…'}</span> will
-            be able to read this document in chat.
+          <p className="mt-1.5 text-[11px] text-[var(--text-faint)]">
+            Only {selectedAgent?.name || '…'} will search this file.
           </p>
         </div>
 
         {!hasRag && selectedAgentId && (
-          <div className="rounded-xl border border-amber-500/40 bg-amber-950/30 px-3 py-2 text-[11px] text-amber-200">
-            Knowledge Base is off for this agent — upload will auto-enable it. You can also edit the
-            agent under{' '}
-            <Link href="/agents" className="underline">
-              Agents
-            </Link>
-            .
-          </div>
+          <p className="rounded-md border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs text-[var(--warn)]">
+            Document search is off for this agent — upload will turn it on, or enable it under Agents.
+          </p>
         )}
 
         <div>
-          <label className="mb-1.5 block text-xs font-bold text-slate-300">PDF file *</label>
-          <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-700 bg-slate-900/50 px-4 py-8 transition hover:border-purple-500/50">
-            <FileText className="mb-2 h-8 w-8 text-slate-500" />
-            <span className="text-sm font-medium text-slate-200">
-              {file ? file.name : 'Click to choose PDF'}
-            </span>
-            <span className="mt-1 text-[11px] text-slate-500">PDF only · max 50MB</span>
+          <label className="ui-label">PDF</label>
+          <label className="flex cursor-pointer flex-col items-center rounded-md border border-dashed border-[var(--border)] px-4 py-8 text-center hover:border-[var(--border-strong)]">
+            <FileText className="mb-2 h-6 w-6 text-[var(--text-faint)]" />
+            <span className="text-sm text-[var(--text)]">{file ? file.name : 'Choose PDF'}</span>
+            <span className="mt-1 text-[11px] text-[var(--text-faint)]">PDF · max 50MB</span>
             <input
               type="file"
               accept="application/pdf"
@@ -211,94 +169,60 @@ function DocumentsContent() {
           </label>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={handleUpload}
             disabled={uploading || !file || !selectedAgentId}
-            className="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-purple-500/25 disabled:opacity-40"
+            className="ui-btn ui-btn-primary"
           >
             {uploading ? 'Uploading…' : 'Upload & assign'}
           </button>
           {selectedAgentId && (
-            <Link
-              href={`/playground?agentId=${selectedAgentId}`}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-800 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:bg-slate-700"
-            >
+            <Link href={`/playground?agentId=${selectedAgentId}`} className="ui-btn ui-btn-ghost">
               <Mic className="h-3.5 w-3.5" />
-              Chat with {selectedAgent?.name}
+              Chat
             </Link>
           )}
         </div>
-      </div>
+      </section>
 
-      {/* Assigned docs list */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-bold text-slate-200">
-            Docs for {selectedAgent?.name || 'agent'} ({documents.length})
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-[var(--text)]">
+            Files for {selectedAgent?.name || 'agent'}
           </h2>
           <button
             type="button"
             onClick={() => selectedAgentId && loadDocuments(selectedAgentId)}
-            className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-            title="Refresh"
+            className="rounded-md p-2 text-[var(--text-muted)] hover:bg-[var(--surface)] hover:text-[var(--text)]"
           >
             <RefreshCw className="h-4 w-4" />
           </button>
         </div>
 
         {loading ? (
-          <div className="glass-panel rounded-2xl p-8 text-center text-xs text-slate-400">
-            Loading…
-          </div>
+          <Loading label="Loading documents" />
         ) : documents.length === 0 ? (
-          <div className="glass-panel rounded-2xl border border-dashed border-slate-700 p-8 text-center text-xs text-slate-500">
-            No documents for this agent yet. Upload above to assign one.
-          </div>
+          <EmptyState title="No documents" body="Upload a PDF above to assign it to this agent." />
         ) : (
-          <div className="space-y-3">
+          <ul className="divide-y divide-[var(--border)] rounded-lg border border-[var(--border)]">
             {documents.map((doc) => (
-              <div
-                key={doc.id}
-                className="glass-panel flex flex-col gap-3 rounded-2xl border border-white/10 p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="rounded-xl border border-purple-500/30 bg-purple-500/20 p-2.5 text-purple-300">
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="truncate text-sm font-bold text-slate-100">{doc.filename}</h4>
-                    <p className="text-[10px] text-slate-400">
-                      {new Date(doc.uploadedAt).toLocaleString()} · only {selectedAgent?.name}
-                    </p>
-                  </div>
+              <li key={doc.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[var(--text)]">{doc.filename}</p>
+                  <p className="text-[11px] text-[var(--text-faint)]">
+                    {new Date(doc.uploadedAt).toLocaleString()} · {doc.status}
+                  </p>
                 </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  {doc.status === 'ready' && (
-                    <span className="inline-flex items-center gap-1 rounded border border-emerald-500/30 bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
-                      <CheckCircle2 className="h-3 w-3" /> Ready
-                    </span>
-                  )}
-                  {doc.status === 'processing' && (
-                    <span className="inline-flex animate-pulse items-center gap-1 rounded border border-amber-500/30 bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
-                      <Clock className="h-3 w-3" /> Processing
-                    </span>
-                  )}
-                  {doc.status === 'failed' && (
-                    <span className="inline-flex items-center gap-1 rounded border border-rose-500/30 bg-rose-500/20 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
-                      <AlertCircle className="h-3 w-3" /> Failed
-                    </span>
-                  )}
-
+                <div className="flex items-center gap-1.5">
                   {reassigningId === doc.id ? (
                     <select
                       autoFocus
                       defaultValue=""
+                      className="ui-input w-auto py-1.5 text-xs"
                       onChange={(e) => handleReassign(doc.id, e.target.value, doc.filename)}
                       onBlur={() => setTimeout(() => setReassigningId(null), 200)}
-                      className="rounded-lg border border-slate-600 bg-slate-900 px-2 py-1 text-[11px] text-slate-200"
                     >
                       <option value="">Move to…</option>
                       {agents
@@ -313,38 +237,32 @@ function DocumentsContent() {
                     <button
                       type="button"
                       onClick={() => setReassigningId(doc.id)}
-                      className="rounded-xl bg-slate-800 p-2 text-slate-300 hover:bg-slate-700"
-                      title="Reassign to another agent"
+                      className="ui-btn ui-btn-ghost"
+                      title="Reassign"
                     >
-                      <ArrowRightLeft className="h-4 w-4" />
+                      <ArrowRightLeft className="h-3.5 w-3.5" />
                     </button>
                   )}
-
                   <button
                     type="button"
                     onClick={() => handleDelete(doc.id, doc.filename)}
-                    className="rounded-xl bg-rose-950/60 p-2 text-rose-300 hover:bg-rose-900/80"
-                    title="Delete"
+                    className="ui-btn ui-btn-ghost text-[var(--danger)]"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
-      </div>
+      </section>
     </div>
   );
 }
 
 export default function DocumentsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="p-8 text-center text-xs text-slate-400">Loading documents…</div>
-      }
-    >
+    <Suspense fallback={<Loading label="Loading documents" />}>
       <DocumentsContent />
     </Suspense>
   );

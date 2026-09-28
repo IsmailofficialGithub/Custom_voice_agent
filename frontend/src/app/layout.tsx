@@ -1,13 +1,28 @@
 import type { Metadata } from 'next';
+import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '../context/auth-context';
 import { ToastProvider } from '../context/toast-context';
 import { AppShell } from '../components/layout/app-shell';
 import { ToastContainer } from '../components/ui/toast-container';
 
+const plexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-plex-sans',
+  display: 'swap',
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-plex-mono',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
-  title: 'Axirom Voice Agent Studio',
-  description: 'Enterprise Autonomous Voice Agent Platform with pgvector RAG and WebSocket Streaming',
+  title: 'Axirom Voice',
+  description: 'Voice agents with documents, memory, and realtime chat',
 };
 
 export default function RootLayout({
@@ -16,8 +31,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className="flex min-h-screen flex-col bg-[#090d16] text-slate-100 antialiased selection:bg-white/20 selection:text-white">
+    <html lang="en" className={`${plexSans.variable} ${plexMono.variable} dark`}>
+      <body className={`${plexSans.className} flex min-h-screen flex-col bg-[var(--bg)] text-[var(--text)] antialiased selection:bg-white/15`}>
         <ToastProvider>
           <AuthProvider>
             <AppShell>{children}</AppShell>
