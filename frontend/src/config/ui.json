@@ -1,0 +1,19 @@
+{
+  "navigation": [
+    { "title": "Dashboard", "href": "/", "icon": "LayoutDashboard" },
+    { "title": "Agent Studio", "href": "/agents", "icon": "Bot" },
+    { "title": "Voice Playground", "href": "/playground", "icon": "Mic" },
+    { "title": "Knowledge Base (RAG)", "href": "/documents", "icon": "FileText" },
+    { "title": "Memory Vault", "href": "/memory", "icon": "Brain" }
+  ],
+  "visualizer": {
+    "barCount": 32,
+    "minHeight": 4,
+    "maxHeight": 64,
+    "smoothing": 0.8
+  },
+  "toast": {
+    "duration": 5000,
+    "position": "top-right"
+  }
+}

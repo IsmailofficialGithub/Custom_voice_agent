@@ -1,0 +1,20 @@
+{
+  "name": "Axirom AI",
+  "tagline": "Enterprise Autonomous Voice Agent Platform",
+  "logo": "🎙️",
+  "version": "v2.5.0-prod",
+  "supportEmail": "support@axirom.ai",
+  "documentationUrl": "https://docs.axirom.ai",
+  "branding": {
+    "primaryColor": "#6366f1",
+    "secondaryColor": "#a855f7",
+    "darkBg": "#090d16",
+    "glassBg": "rgba(15, 23, 42, 0.75)"
+  },
+  "features": [
+    "Real-time WebSocket Voice Streaming",
+    "pgvector RAG Document Ingestion",
+    "Multi-turn Long Term Memory",
+    "Multi-LLM Provider Engine (OpenAI & Claude)"
+  ]
+}
