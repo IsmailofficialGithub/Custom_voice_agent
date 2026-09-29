@@ -30,7 +30,7 @@ interface AuthContextType {
   hasPermission: (permission: string) => boolean;
 }
 
-const DEFAULT_API_KEY = 'dev-secret-key-change-me';
+const DEFAULT_API_KEY = process.env.NEXT_PUBLIC_DEFAULT_API_KEY || 'dev-secret-key-change-me';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
