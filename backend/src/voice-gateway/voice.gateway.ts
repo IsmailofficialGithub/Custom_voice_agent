@@ -14,6 +14,7 @@ import { ConversationsService } from '../conversations/conversations.service';
 import { SttService } from '../providers/stt/stt.service';
 import { TtsService } from '../providers/tts/tts.service';
 import { RedisService } from '../redis/redis.service';
+import { AuthService } from '../auth/auth.service';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const WebSocket = require('ws');
@@ -47,6 +48,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly sttService: SttService,
     private readonly ttsService: TtsService,
     private readonly redisService: RedisService,
+    private readonly authService: AuthService,
   ) {}
 
   handleConnection(client: WsClient, req: { url?: string; headers: Record<string, string | string[] | undefined> }) {
@@ -55,10 +57,8 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const match = url.match(/\/api\/v1\/voice\/([^?]+)/);
     const conversationId = urlParams.get('conversationId') ?? match?.[1];
 
-    const apiKey = urlParams.get('apiKey') ?? req.headers['x-api-key'];
-    const validKey = this.config.get<string>('API_KEY');
-
-    if (apiKey !== validKey || !conversationId) {
+    const token = String(urlParams.get('apiKey') ?? req.headers['x-api-key'] ?? '');
+    if (!this.authService.isValidBearer(token) || !conversationId) {
       this.send(client, { type: 'error', message: 'Unauthorized or missing conversation ID' });
       client.close(1008, 'Unauthorized');
       return;

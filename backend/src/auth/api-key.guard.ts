@@ -1,10 +1,10 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
+import { AuthService } from './auth.service';
 
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly auth: AuthService) {}
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
@@ -14,11 +14,9 @@ export class ApiKeyGuard implements CanActivate {
       throw new UnauthorizedException('Missing or invalid Authorization header');
     }
 
-    const providedKey = authHeader.slice(7).trim();
-    const validKey = (this.config.get<string>('API_KEY') ?? '').trim().replace(/^["']|["']$/g, '');
-
-    if (providedKey !== validKey) {
-      throw new UnauthorizedException('Invalid API key');
+    const token = authHeader.slice(7).trim();
+    if (!this.auth.isValidBearer(token)) {
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     return true;

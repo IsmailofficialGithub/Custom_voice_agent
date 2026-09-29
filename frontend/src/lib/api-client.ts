@@ -77,6 +77,19 @@ async function fetchWithAuth<T>(path: string, options: RequestInit = {}, apiKey:
 }
 
 export const apiClient = {
+  login: (email: string, password: string) =>
+    fetch(`${BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    }).then(async (response) => {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(errorData.message || 'Login failed');
+      }
+      return response.json() as Promise<{ token: string; email: string }>;
+    }),
+
   // Health
   getHealth: (apiKey: string) => fetchWithAuth<HealthCheck>('/health', {}, apiKey),
 
