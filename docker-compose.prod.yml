@@ -13,11 +13,14 @@ services:
       - "5440:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - voiceagent
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-voiceagent}"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
@@ -27,6 +30,8 @@ services:
       - "6380:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - voiceagent
     healthcheck:
       test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
       interval: 5s
@@ -48,6 +53,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - voiceagent
     volumes:
       - backend_uploads:/app/uploads
 
@@ -65,9 +72,15 @@ services:
       - .env
     ports:
       - "3010:3000"
+    networks:
+      - voiceagent
     depends_on:
       backend:
         condition: service_started
+
+networks:
+  voiceagent:
+    name: voiceagent_net
 
 volumes:
   postgres_data:

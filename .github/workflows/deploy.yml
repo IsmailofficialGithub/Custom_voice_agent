@@ -25,7 +25,6 @@ jobs:
       - name: Create .env on server
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cat > ${{ secrets.DEPLOY_PATH }}/.env << 'ENVEOF'
-          # Database
           POSTGRES_USER=postgres
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           POSTGRES_DB=voiceagent
@@ -75,6 +74,7 @@ jobs:
           NEXT_PUBLIC_API_URL=https://vagent.axiomra.co/api/v1
           NEXT_PUBLIC_WS_URL=wss://vagent.axiomra.co/api/v1/voice
           ENVEOF"
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sed -i 's/^[[:space:]]*//' ${{ secrets.DEPLOY_PATH }}/.env"
 
       - name: Pull latest code
         run: |
@@ -91,7 +91,9 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'SSHEOF'
             cd ${{ secrets.DEPLOY_PATH }}
-            docker compose -f docker-compose.prod.yml build --no-cache
+            docker compose -f docker-compose.prod.yml up -d postgres redis
+            sleep 8
+            docker compose -f docker-compose.prod.yml build backend frontend
             docker compose -f docker-compose.prod.yml up -d
             docker compose -f docker-compose.prod.yml ps
           SSHEOF
