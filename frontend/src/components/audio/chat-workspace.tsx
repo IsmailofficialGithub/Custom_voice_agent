@@ -74,6 +74,9 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError }: Pr
             onStatusChange: (s) => setCallState(s),
             onError: (e) => onError?.(e),
             onAudioLevelChange: (l) => setAudioLevel(l),
+            onLatencyMetrics: (metrics) => {
+              console.log('[Turn Latency Metrics]', metrics);
+            },
           },
           wsUrl,
         );
@@ -113,7 +116,7 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError }: Pr
     setMessages((prev) => {
       if (prev.length && prev[prev.length - 1].sender === 'assistant') {
         const next = [...prev];
-        next[next.length - 1] = { ...next[next.length - 1], text: next[next.length - 1].text + text };
+        next[next.length - 1] = { ...next[next.length - 1], text };
         return next;
       }
       return [...prev, { id: `${Date.now()}-a`, sender: 'assistant', text }];

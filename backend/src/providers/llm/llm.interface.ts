@@ -23,4 +23,11 @@ export interface LlmResponse {
 
 export interface LlmProvider {
   chat(messages: LlmMessage[], tools?: ToolDefinition[], model?: string): Promise<LlmResponse>;
+  chatStream?(
+    messages: LlmMessage[],
+    tools?: ToolDefinition[],
+    model?: string,
+    onToken?: (token: string) => void,
+    signal?: AbortSignal,
+  ): Promise<LlmResponse>;
 }

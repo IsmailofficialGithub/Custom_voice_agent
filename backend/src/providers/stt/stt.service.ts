@@ -11,7 +11,7 @@ export class SttService {
     this.client = new OpenAI({ apiKey: config.get<string>('OPENAI_API_KEY') });
   }
 
-  async transcribeBuffer(audioBuffer: Buffer, defaultFilename = 'speech.webm'): Promise<string> {
+  async transcribeBuffer(audioBuffer: Buffer, defaultFilename = 'speech.webm', signal?: AbortSignal): Promise<string> {
     try {
       let filename = 'speech.webm';
       let mimeType = 'audio/webm';
@@ -46,19 +46,20 @@ export class SttService {
       this.logger.log(`Transcribing audio buffer (${audioBuffer.length} bytes, format: ${filename}, mimeType: ${mimeType})...`);
 
       const file = await toFile(audioBuffer, filename, { type: mimeType });
-      // Default to English — unlocked Whisper often hallucinates other languages on short clips
-      const language = (this.config.get<string>('STT_LANGUAGE') || 'en').trim() || 'en';
+      const configuredLang = (this.config.get<string>('STT_LANGUAGE') || '').trim();
+      const configuredModel = (this.config.get<string>('STT_MODEL') || 'whisper-1').trim();
 
-      const response = await this.client.audio.transcriptions.create({
+      const sttOptions: any = {
         file,
-        model: 'whisper-1',
-        language,
+        model: configuredModel,
         temperature: 0,
-        prompt:
-          'Transcribe only clear spoken English words from the user. ' +
-          'If the audio is silence, noise, or unintelligible, return an empty string. ' +
-          'Do not invent phrases like thanks for watching.',
-      });
+        prompt: 'Main tumhari aawaz sunna chahta hoon. Transcribe spoken Roman Urdu, Urdu, Hindi, Hinglish, or English verbatim.',
+      };
+      if (configuredLang && configuredLang !== 'auto') {
+        sttOptions.language = configuredLang;
+      }
+
+      const response = await this.client.audio.transcriptions.create(sttOptions, { signal });
 
       const text = (response.text || '').trim();
       if (this.isLikelyHallucination(text)) {

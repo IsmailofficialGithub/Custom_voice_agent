@@ -27,6 +27,7 @@ export interface VoiceEventHandlers {
   onAudioLevelChange?: (level: number) => void;
   onSpeechStart?: () => void;
   onSpeechEnd?: () => void;
+  onLatencyMetrics?: (metrics: Record<string, number>) => void;
 }
 
 export class VoiceSessionClient {
@@ -42,9 +43,10 @@ export class VoiceSessionClient {
   private silenceTimer: ReturnType<typeof setTimeout> | null = null;
 
   private currentAudioElement: HTMLAudioElement | null = null;
+  private currentSourceNode: AudioBufferSourceNode | null = null;
   private currentState: VoiceState = 'idle';
 
-  /** When true: no mic capture, no audio send. Typed messages still work. */
+  // When true: no mic capture, no audio send. Typed messages still work.
   private isPaused = false;
   private isProcessingTurn = false;
   private isCapturing = false;
@@ -57,19 +59,19 @@ export class VoiceSessionClient {
   private isPlayingQueue = false;
   private endOfResponseReceived = false;
 
-  /** Always-on short pre-roll so we don't clip the start of speech */
+  // Always-on short pre-roll so we don't clip the start of speech
   private preRoll: Float32Array[] = [];
   private captureChunks: Float32Array[] = [];
   private preRollSamples = 0;
   private captureSamples = 0;
 
-  // VAD — require real speech, ignore ambient room noise
-  private readonly silenceThreshold = 22;
-  private readonly bargeInThreshold = 28;
-  private readonly silenceDurationMs = 550;
-  private readonly minSpeechDurationMs = 400;
-  private readonly preRollMs = 280;
-  private readonly speechOnsetNeeded = 5;
+  // VAD — ultra-responsive voice endpointing (~300ms trailing silence)
+  private readonly silenceThreshold = 10;
+  private readonly bargeInThreshold = 16;
+  private readonly silenceDurationMs = 300;
+  private readonly minSpeechDurationMs = 200;
+  private readonly preRollMs = 250;
+  private readonly speechOnsetNeeded = 2;
   private speechOnsetFrames = 0;
 
   constructor(
@@ -167,27 +169,35 @@ export class VoiceSessionClient {
         if (this.isStaleResponse()) return;
         this.endOfResponseReceived = true;
         if (!this.isPlayingQueue && this.audioQueue.length === 0) {
-          this.isProcessingTurn = false;
-          if (this.currentState !== 'speaking' && this.currentState !== 'user_speaking') {
-            this.updateState('listening');
-          }
+          this.resetTurnToListening();
         }
         break;
       case 'status':
         if (msg.status === 'idle') {
           if (!this.isStaleResponse()) {
-            this.isProcessingTurn = false;
-            if (this.currentState !== 'user_speaking') this.updateState('listening');
+            this.resetTurnToListening();
           }
         } else if (msg.status) {
           if (this.isStaleResponse()) return;
           this.updateState(msg.status);
         }
         break;
+      case 'latency_metrics':
+        if ((msg as any).metrics) {
+          console.log('[Voice Latency Metrics]', (msg as any).metrics);
+          this.handlers.onLatencyMetrics?.((msg as any).metrics);
+        }
+        break;
+      case 'interrupted':
+      case 'interrupt':
+        this.listeningEpoch += 1;
+        this.stopCurrentAudio(true);
+        this.isPlayingQueue = false;
+        this.resetTurnToListening();
+        break;
       case 'error':
         if (!this.isStaleResponse()) {
-          this.isProcessingTurn = false;
-          if (this.currentState !== 'user_speaking') this.updateState('listening');
+          this.resetTurnToListening();
           if (msg.message) this.handlers.onError?.(msg.message);
         }
         break;
@@ -286,9 +296,13 @@ export class VoiceSessionClient {
       if (!this.analyser) return;
       this.analyser.getByteFrequencyData(dataArray);
 
+      // Focus on human vocal spectrum (~100Hz to ~5.5kHz, bins 2..128 of 512)
       let sum = 0;
-      for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-      const normalized = Math.min(100, Math.round((sum / dataArray.length / 128) * 100));
+      const voiceBinEnd = Math.min(dataArray.length, 128);
+      const voiceBinCount = voiceBinEnd - 2;
+      for (let i = 2; i < voiceBinEnd; i++) sum += dataArray[i];
+      const voiceAvg = voiceBinCount > 0 ? sum / voiceBinCount : 0;
+      const normalized = Math.min(100, Math.round((voiceAvg / 128) * 100));
       this.handlers.onAudioLevelChange?.(normalized);
 
       if (this.isPaused) {
@@ -296,7 +310,14 @@ export class VoiceSessionClient {
         return;
       }
 
-      if (this.currentState === 'speaking' && normalized >= this.bargeInThreshold) {
+      const isSystemBusy =
+        this.isProcessingTurn ||
+        this.currentState === 'speaking' ||
+        this.currentState === 'thinking' ||
+        this.currentState === 'transcribing' ||
+        this.currentState === 'generating_speech';
+
+      if (isSystemBusy && normalized >= this.bargeInThreshold) {
         this.bargeIn();
       }
 
@@ -310,15 +331,44 @@ export class VoiceSessionClient {
     update();
   }
 
+  private resetTurnToListening() {
+    this.isProcessingTurn = false;
+    this.endOfResponseReceived = false;
+    this.speechOnsetFrames = 0;
+    this.isCapturing = false;
+    this.captureChunks = [];
+    this.captureSamples = 0;
+    this.preRoll = [];
+    this.preRollSamples = 0;
+    if (this.silenceTimer) {
+      clearTimeout(this.silenceTimer);
+      this.silenceTimer = null;
+    }
+    if (this.audioContext && this.audioContext.state === 'suspended') {
+      this.audioContext.resume().catch(() => {});
+    }
+    if (this.currentState !== 'user_speaking') {
+      this.updateState('listening');
+    }
+  }
+
   private bargeIn() {
     this.listeningEpoch += 1;
     this.stopCurrentAudio(true);
     this.isPlayingQueue = false;
     this.isProcessingTurn = false;
+    this.endOfResponseReceived = false;
     if (this.silenceTimer) {
       clearTimeout(this.silenceTimer);
       this.silenceTimer = null;
     }
+
+    // Immediately signal backend to abort in-flight LLM stream and TTS generation
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ event: 'message', data: { type: 'interrupt' } }));
+      this.ws.send(JSON.stringify({ event: 'interrupt' }));
+    }
+
     this.speechStartTime = Date.now();
     this.beginCapture();
     this.updateState('user_speaking');
@@ -381,13 +431,12 @@ export class VoiceSessionClient {
     const sampleRate = this.audioContext?.sampleRate || 48000;
     const wavBlob = this.encodeWav16kMono(chunks, sampleRate);
 
-    // ~0.4s of 16kHz mono 16-bit ≈ 12KB+ header; require real speech energy
-    if (wavBlob.size >= 6000 && this.hasSpeechEnergy(chunks)) {
+    // ~0.25s of 16kHz mono 16-bit ≈ 8KB+ header; require real speech energy
+    if (wavBlob.size >= 4000 && this.hasSpeechEnergy(chunks)) {
       this.isProcessingTurn = true;
       await this.sendAudioTurn(wavBlob);
     } else {
-      this.isProcessingTurn = false;
-      this.updateState('listening');
+      this.resetTurnToListening();
     }
   }
 
@@ -403,7 +452,7 @@ export class VoiceSessionClient {
     }
     if (n === 0) return false;
     const rms = Math.sqrt(sumSq / n);
-    return rms > 0.01;
+    return rms > 0.003;
   }
 
   private encodeWav16kMono(chunks: Float32Array[], inputSampleRate: number): Blob {
@@ -498,7 +547,7 @@ export class VoiceSessionClient {
         this.ws.send(
           JSON.stringify({
             event: 'message',
-            data: { type: 'end_of_turn' },
+            data: { type: 'end_of_turn', speech_end: Date.now() },
           }),
         );
       } else {
@@ -545,12 +594,45 @@ export class VoiceSessionClient {
 
     this.isPlayingQueue = false;
     if (this.endOfResponseReceived && !this.isStaleResponse()) {
-      this.isProcessingTurn = false;
-      if (this.currentState !== 'user_speaking') this.updateState('listening');
+      this.resetTurnToListening();
     }
   }
 
-  private playAudioResponseAsync(base64Audio: string): Promise<void> {
+  private async playAudioResponseAsync(base64Audio: string): Promise<void> {
+    if (this.audioContext) {
+      try {
+        if (this.audioContext.state === 'suspended') {
+          await this.audioContext.resume();
+        }
+        const binaryString = atob(base64Audio);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const audioBuffer = await this.audioContext.decodeAudioData(bytes.buffer);
+        this.stopCurrentAudio(false);
+        this.updateState('speaking');
+
+        return await new Promise<void>((resolve) => {
+          if (!this.audioContext) return resolve();
+          const source = this.audioContext.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(this.audioContext.destination);
+          this.currentSourceNode = source;
+          source.onended = () => {
+            if (this.currentSourceNode === source) {
+              this.currentSourceNode = null;
+            }
+            resolve();
+          };
+          source.start(0);
+        });
+      } catch {
+        // Fallback to HTML Audio Element if Web Audio decode fails
+      }
+    }
+
     return new Promise((resolve) => {
       try {
         this.stopCurrentAudio(false);
@@ -575,6 +657,16 @@ export class VoiceSessionClient {
       this.audioQueue = [];
       this.endOfResponseReceived = false;
     }
+    if (this.currentSourceNode) {
+      try {
+        this.currentSourceNode.onended = null;
+        this.currentSourceNode.stop();
+        this.currentSourceNode.disconnect();
+      } catch {
+        // ignore
+      }
+      this.currentSourceNode = null;
+    }
     if (this.currentAudioElement) {
       this.currentAudioElement.onended = null;
       this.currentAudioElement.onerror = null;
@@ -594,10 +686,14 @@ export class VoiceSessionClient {
       clearTimeout(this.silenceTimer);
       this.silenceTimer = null;
     }
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ event: 'message', data: { type: 'interrupt' } }));
+      this.ws.send(JSON.stringify({ event: 'interrupt' }));
+    }
     this.updateState('listening');
   }
 
-  /** Pause = stop capture & never send audio. Typing still works. */
+  // Pause = stop capture & never send audio. Typing still works.
   pause(): void {
     this.isPaused = true;
     if (this.silenceTimer) {
@@ -622,7 +718,7 @@ export class VoiceSessionClient {
     return this.isPaused;
   }
 
-  /** @deprecated Prefer togglePause — same behavior */
+  // Deprecated: Prefer togglePause — same behavior
   toggleMute(): boolean {
     return this.togglePause();
   }
@@ -669,7 +765,7 @@ export class VoiceSessionClient {
       try {
         this.scriptProcessor.disconnect();
       } catch {
-        /* ignore */
+        // ignore
       }
       this.scriptProcessor = null;
     }
@@ -677,7 +773,7 @@ export class VoiceSessionClient {
       try {
         this.keepAliveGain.disconnect();
       } catch {
-        /* ignore */
+        // ignore
       }
       this.keepAliveGain = null;
     }
@@ -685,7 +781,7 @@ export class VoiceSessionClient {
       try {
         this.mediaSource.disconnect();
       } catch {
-        /* ignore */
+        // ignore
       }
       this.mediaSource = null;
     }

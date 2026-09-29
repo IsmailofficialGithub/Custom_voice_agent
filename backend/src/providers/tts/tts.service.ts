@@ -14,18 +14,26 @@ export class TtsService {
   async generateSpeechBuffer(
     text: string,
     voice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' = 'alloy',
+    signal?: AbortSignal,
   ): Promise<Buffer> {
     try {
-      const mp3Response = await this.client.audio.speech.create({
-        model: 'tts-1',
-        voice,
-        input: text,
-        response_format: 'mp3',
-        speed: 1.05,
-      });
+      const mp3Response = await this.client.audio.speech.create(
+        {
+          model: 'tts-1',
+          voice,
+          input: text,
+          response_format: 'mp3',
+          speed: 1.05,
+        },
+        { signal },
+      );
       const buffer = Buffer.from(await mp3Response.arrayBuffer());
       return buffer;
-    } catch (err) {
+    } catch (err: any) {
+      if (signal?.aborted || err?.name === 'AbortError') {
+        this.logger.log('TTS generation aborted');
+        throw err;
+      }
       this.logger.error(`TTS generation failed: ${err}`);
       throw err;
     }
@@ -34,8 +42,9 @@ export class TtsService {
   async generateSpeechBase64(
     text: string,
     voice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' = 'alloy',
+    signal?: AbortSignal,
   ): Promise<string> {
-    const buffer = await this.generateSpeechBuffer(text, voice);
+    const buffer = await this.generateSpeechBuffer(text, voice, signal);
     return buffer.toString('base64');
   }
 }

@@ -133,7 +133,7 @@ function PlaygroundContent() {
       try {
         await apiClient.endConversation(current.id, apiKey);
       } catch {
-        /* ignore */
+        // ignore
       }
       if (selectedAgentId) await loadConversations(selectedAgentId);
     }
