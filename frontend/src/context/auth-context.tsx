@@ -49,13 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const [apiKey, setApiKeyState] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('axirom_api_key');
-      // If stored key is the old hardcoded default or missing, reset to the current env key
-      if (!stored || stored === 'dev-secret-key-change-me') {
-        localStorage.setItem('axirom_api_key', DEFAULT_API_KEY);
-        return DEFAULT_API_KEY;
-      }
-      return stored;
+      localStorage.setItem('axirom_api_key', DEFAULT_API_KEY);
     }
     return DEFAULT_API_KEY;
   });

@@ -14,8 +14,8 @@ export class ApiKeyGuard implements CanActivate {
       throw new UnauthorizedException('Missing or invalid Authorization header');
     }
 
-    const providedKey = authHeader.slice(7); // strip "Bearer "
-    const validKey = this.config.get<string>('API_KEY');
+    const providedKey = authHeader.slice(7).trim();
+    const validKey = (this.config.get<string>('API_KEY') ?? '').trim().replace(/^["']|["']$/g, '');
 
     if (providedKey !== validKey) {
       throw new UnauthorizedException('Invalid API key');
