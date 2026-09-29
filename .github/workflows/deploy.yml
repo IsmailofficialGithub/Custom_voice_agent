@@ -1,0 +1,108 @@
+﻿name: Deploy Voice Agent
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create .env on server
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cat > ${{ secrets.DEPLOY_PATH }}/.env << 'ENVEOF'
+          # Database
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB=voiceagent
+          DATABASE_URL=postgresql://postgres:${{ secrets.POSTGRES_PASSWORD }}@postgres:5432/voiceagent
+
+          # Redis
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+          REDIS_PASSWORD=
+          REDIS_KEY_PREFIX=voiceagent:
+          SESSION_TTL_SEC=600
+          RAG_CACHE_TTL_SEC=600
+
+          # Rate Limiting
+          VOICE_RATE_LIMIT_TURNS=30
+          VOICE_RATE_LIMIT_WINDOW_SEC=60
+
+          # App
+          API_KEY=${{ secrets.API_KEY }}
+          PORT=3000
+          BACKEND_PORT=3011
+          FRONTEND_PORT=3010
+
+          # AI Providers
+          LLM_PROVIDER=openai
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+          STT_PROVIDER=openai
+          STT_MODEL=whisper-1
+          STT_LANGUAGE=en
+          TTS_PROVIDER=openai
+          SEARCH_PROVIDER=brave
+          BRAVE_SEARCH_API_KEY=${{ secrets.BRAVE_SEARCH_API_KEY }}
+          EMBEDDING_PROVIDER=openai
+          EMBEDDING_MODEL=text-embedding-3-small
+
+          # Voice Engine
+          VOICE_ENGINE=pipeline
+          OPENAI_REALTIME_MODEL=gpt-4o-realtime-preview
+
+          # Memory
+          UPLOAD_DIR=./uploads
+          MEMORY_TRIGGER_TURNS=10
+          SHORT_TERM_WINDOW=20
+
+          # Frontend
+          NEXT_PUBLIC_API_URL=https://vagent.axiomra.co/api/v1
+          NEXT_PUBLIC_WS_URL=wss://vagent.axiomra.co/api/v1/voice
+          ENVEOF"
+
+      - name: Pull latest code
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "cd ${{ secrets.DEPLOY_PATH }} && git pull origin main"
+
+      - name: Copy docker-compose.prod.yml
+        run: |
+          scp -i ~/.ssh/deploy_key -P ${{ secrets.SSH_PORT }} \
+            docker-compose.prod.yml \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/docker-compose.prod.yml
+
+      - name: Build & restart containers
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'SSHEOF'
+            cd ${{ secrets.DEPLOY_PATH }}
+            docker compose -f docker-compose.prod.yml build --no-cache
+            docker compose -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.prod.yml ps
+          SSHEOF
+
+      - name: Health check
+        run: |
+          sleep 15
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://vagent.axiomra.co/api/v1/health)
+          echo "Health check status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Health check failed!"
+            exit 1
+          fi
+          echo "Deployment successful!"
