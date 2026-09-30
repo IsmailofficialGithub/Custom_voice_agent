@@ -156,9 +156,8 @@ function PlaygroundContent() {
     <div className="flex h-screen overflow-hidden bg-black text-white">
       {/* Sidebar */}
       <aside
-        className={`flex shrink-0 flex-col border-r border-zinc-800/80 bg-[#171717] transition-all duration-200 ${
-          sidebarOpen ? 'w-[260px]' : 'w-0 overflow-hidden border-0'
-        }`}
+        className={`flex shrink-0 flex-col border-r border-zinc-800/80 bg-[#171717] transition-all duration-200 ${sidebarOpen ? 'w-[260px]' : 'w-0 overflow-hidden border-0'
+          }`}
       >
         <div className="flex items-center gap-2 p-3">
           <button
@@ -203,9 +202,8 @@ function PlaygroundContent() {
                 return (
                   <div
                     key={chat.id}
-                    className={`group flex items-center gap-1 rounded-lg ${
-                      active ? 'bg-zinc-800' : 'hover:bg-zinc-800/70'
-                    }`}
+                    className={`group flex items-center gap-1 rounded-lg ${active ? 'bg-zinc-800' : 'hover:bg-zinc-800/70'
+                      }`}
                   >
                     <button
                       type="button"
@@ -263,7 +261,7 @@ function PlaygroundContent() {
             </button>
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-zinc-100">
-                {activeConversation?.title || 'Axirom Voice'}
+                {activeConversation?.title || 'Axiomra Voice'}
               </span>
               {selectedAgent && (
                 <span className="hidden items-center gap-1 rounded-full border border-zinc-700 px-2 py-0.5 text-[11px] text-zinc-400 sm:inline-flex">

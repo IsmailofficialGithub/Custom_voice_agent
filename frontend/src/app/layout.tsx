@@ -21,7 +21,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Axirom Voice',
+  title: 'Axiomra Voice',
   description: 'Voice agents with documents, memory, and realtime chat',
 };
 

@@ -40,8 +40,8 @@ async function run() {
   // 2. Create agent with search_knowledge_base tool
   console.log('\n2. Create RAG Agent');
   const { status: s1, data: agent } = await jsonReq('POST', '/agents', {
-    name: 'Axirom Knowledge Bot',
-    systemPrompt: 'You are an internal assistant for Axirom employees. Use the knowledge base to answer company policy questions.',
+    name: 'Axiomra Knowledge Bot',
+    systemPrompt: 'You are an internal assistant for Axiomra employees. Use the knowledge base to answer company policy questions.',
     enabledTools: ['search_knowledge_base', 'get_time'],
     llmProvider: 'openai',
     llmModel: 'gpt-4o',
@@ -62,7 +62,7 @@ async function run() {
 5 0 obj<</Length 220>>stream
 BT /F1 12 Tf 50 700 Td (AXIROM COMPANY POLICY DOCUMENT 2026) Tj ET
 BT /F1 10 Tf 50 670 Td (Section 4.2 - Remote Work Stipend:) Tj ET
-BT /F1 10 Tf 50 650 Td (All full-time Axirom engineers are entitled to a monthly equipment stipend of 750 USD.) Tj ET
+BT /F1 10 Tf 50 650 Td (All full-time Axiomra engineers are entitled to a monthly equipment stipend of 750 USD.) Tj ET
 BT /F1 10 Tf 50 630 Td (Requests must be submitted via the internal Portal code AXI-750.) Tj ET
 endstream
 endobj
@@ -80,14 +80,14 @@ startxref
 590
 %%EOF`;
 
-  const tempPdfPath = path.join(process.cwd(), 'temp_axirom_policy.pdf');
+  const tempPdfPath = path.join(process.cwd(), 'temp_axiomra_policy.pdf');
   fs.writeFileSync(tempPdfPath, pdfContent);
 
   // Upload PDF via FormData
   const fileBuffer = fs.readFileSync(tempPdfPath);
   const blob = new Blob([fileBuffer], { type: 'application/pdf' });
   const formData = new FormData();
-  formData.append('file', blob, 'axirom_policy_2026.pdf');
+  formData.append('file', blob, 'axiomra_policy_2026.pdf');
 
   const uploadRes = await fetch(`${BASE}/agents/${agentId}/documents`, {
     method: 'POST',
@@ -134,7 +134,7 @@ startxref
   // 6. Send RAG query — require knowledge base lookup
   console.log('\n6. Send text message triggering RAG search');
   const { status: s3, data: msg } = await jsonReq('POST', `/conversations/${convId}/messages`, {
-    content: 'What is the monthly remote work equipment stipend amount for full-time engineers at Axirom according to section 4.2?',
+    content: 'What is the monthly remote work equipment stipend amount for full-time engineers at Axiomra according to section 4.2?',
   });
 
   s3 === 200 && msg?.content

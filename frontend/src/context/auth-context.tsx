@@ -33,7 +33,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const SESSION_KEY = 'axirom_session';
+const SESSION_KEY = 'axiomra_session';
 
 function readSession(): string {
   if (typeof window === 'undefined') return '';
@@ -45,11 +45,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready] = useState(true);
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('axirom_user');
+      const saved = localStorage.getItem('axiomra_user');
       if (saved) {
         try {
           return JSON.parse(saved);
-        } catch {}
+        } catch { }
       }
     }
     return authConfig.demoUsers[0] as UserProfile;
@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (found) {
       setCurrentUser(found as UserProfile);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('axirom_user', JSON.stringify(found));
+        localStorage.setItem('axiomra_user', JSON.stringify(found));
       }
     }
   };
@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setCurrentUser(user);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('axirom_user', JSON.stringify(user));
+      localStorage.setItem('axiomra_user', JSON.stringify(user));
     }
     return true;
   };
@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const defaultUser = authConfig.demoUsers[0] as UserProfile;
     setCurrentUser(defaultUser);
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('axirom_user');
+      localStorage.removeItem('axiomra_user');
       localStorage.removeItem(SESSION_KEY);
     }
   };
