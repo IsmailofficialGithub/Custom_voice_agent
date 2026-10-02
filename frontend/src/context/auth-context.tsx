@@ -44,10 +44,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const savedKey = localStorage.getItem(SESSION_KEY);
-    const activeKey = savedKey !== null && savedKey !== '' ? savedKey : DEFAULT_KEY;
+    let activeKey = savedKey || '';
+    if (DEFAULT_KEY && DEFAULT_KEY !== 'dev-secret-key-change-me' && activeKey === 'dev-secret-key-change-me') {
+      activeKey = DEFAULT_KEY;
+    } else if (!activeKey) {
+      activeKey = DEFAULT_KEY;
+    }
     if (activeKey) {
       setApiKeyState(activeKey);
-      if (!savedKey && typeof window !== 'undefined') {
+      if (typeof window !== 'undefined') {
         localStorage.setItem(SESSION_KEY, activeKey);
       }
     }
