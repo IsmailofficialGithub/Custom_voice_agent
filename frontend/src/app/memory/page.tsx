@@ -18,6 +18,7 @@ export default function MemoryPage() {
   }, [apiKey]);
 
   const loadAgents = async () => {
+    if (!apiKey) return;
     setLoading(true);
     try {
       const list = await apiClient.getAgents(apiKey);

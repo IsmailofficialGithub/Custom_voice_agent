@@ -70,6 +70,13 @@ export class ConversationsService {
     return conv;
   }
 
+  async getConversationWithAgent(id: string) {
+    return this.prisma.conversation.findUnique({
+      where: { id },
+      include: { agent: true },
+    });
+  }
+
   /** Chat override → agent default → alloy */
   async resolveTtsVoice(conversationId: string): Promise<'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'> {
     const conv = await this.prisma.conversation.findUnique({

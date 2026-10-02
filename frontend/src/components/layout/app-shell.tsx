@@ -9,8 +9,21 @@ import { LoginPage } from '../auth/login-page';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { apiKey } = useAuth();
+  const { apiKey, ready } = useAuth();
   const isPlayground = pathname?.startsWith('/playground');
+  const isLoginRoute = pathname === '/login';
+
+  if (!ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black text-sm text-zinc-500">
+        Loading…
+      </div>
+    );
+  }
+
+  if (isLoginRoute) {
+    return <>{children}</>;
+  }
 
   if (!apiKey) {
     return <LoginPage />;

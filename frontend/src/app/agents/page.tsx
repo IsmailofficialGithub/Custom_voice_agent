@@ -44,6 +44,7 @@ export default function AgentsPage() {
   }, [apiKey]);
 
   const loadAgents = async () => {
+    if (!apiKey) return;
     setLoading(true);
     try {
       setAgents(await apiClient.getAgents(apiKey));

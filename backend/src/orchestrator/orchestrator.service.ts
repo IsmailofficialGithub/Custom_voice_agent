@@ -159,6 +159,7 @@ export class OrchestratorService {
     userMessage: string,
     callbacks: {
       onFirstToken?: () => void;
+      onToken?: (token: string) => void;
       onSentence?: (sentence: string) => Promise<void> | void;
     },
     signal?: AbortSignal,
@@ -172,25 +173,27 @@ export class OrchestratorService {
 
     const agent = conversation.agent;
 
-    // Persist user message
-    await this.prisma.message.create({
+    // Persist user message in background (non-blocking for voice latency)
+    void this.prisma.message.create({
       data: { conversationId, role: 'user', content: userMessage },
-    });
+    }).catch((e) => this.logger.warn(`Failed to persist user message: ${e}`));
 
-    // Auto-title chat from first user message
-    await this.maybeRenameConversation(conversationId, conversation.title, userMessage);
+    // Auto-title chat in background
+    void this.maybeRenameConversation(conversationId, conversation.title, userMessage).catch(() => {});
 
-    // Load short-term memory (last N messages)
-    const recentMessages = await this.prisma.message.findMany({
-      where: { conversationId },
-      orderBy: { createdAt: 'desc' },
-      take: this.shortTermWindow,
-    });
+    // Run short-term history and memory count in parallel
+    const [recentMessages, memoryCount] = await Promise.all([
+      this.prisma.message.findMany({
+        where: { conversationId },
+        orderBy: { createdAt: 'desc' },
+        take: this.shortTermWindow,
+      }),
+      this.prisma.memory.count({ where: { agentId: agent.id } }),
+    ]);
     recentMessages.reverse();
 
-    // Load long-term memory only if agent has stored memories (avoids dead HTTP embedding call)
+    // Load long-term memory only if agent has stored memories
     let longTermMemories: string[] = [];
-    const memoryCount = await this.prisma.memory.count({ where: { agentId: agent.id } });
     if (memoryCount > 0) {
       longTermMemories = await this.memoryService.retrieveRelevant(agent.id, userMessage);
     }
@@ -239,18 +242,19 @@ export class OrchestratorService {
         firstTokenSeen = true;
         callbacks.onFirstToken?.();
       }
+      callbacks.onToken?.(token);
 
       sentenceBuffer += token;
 
-      // Fast Phrasal Streaming for Voice:
-      // 1. Check for sentence terminators (. ? ! \n)
-      // 2. Check for clause pauses (, ; : -) when at least 3 words are ready
-      // 3. Fallback: chunk after 6 words on a space boundary
+      // Ultra-Fast Phrasal Streaming for Voice:
+      // 1. Immediately dispatch on terminal punctuation (. ? ! \n), even for single words ("Hello!", "Hi!")
+      // 2. Dispatch on clause pauses (, ; : -) when at least 2 words are ready
+      // 3. Fallback: chunk after 4-5 words on a space boundary so TTS starts immediately
       const words = sentenceBuffer.trim().split(/\s+/);
       const hasTerminal = /[.?!;\n]/.test(sentenceBuffer);
       const hasClause = /[,:\-]/.test(sentenceBuffer);
 
-      if (hasTerminal && words.length >= 2) {
+      if (hasTerminal && words.length >= 1) {
         const match = sentenceBuffer.match(/^(.*?[.?!;\n])(?:\s+|$)([\s\S]*)$/);
         if (match) {
           const candidate = match[1].trim();
@@ -268,12 +272,12 @@ export class OrchestratorService {
         }
       }
 
-      if (hasClause && words.length >= 3) {
+      if (hasClause && words.length >= 2) {
         const match = sentenceBuffer.match(/^(.*?[,:\-])(?:\s+|$)([\s\S]*)$/);
         if (match) {
           const candidate = match[1].trim();
           const remainder = match[2];
-          if (candidate.length >= 3) {
+          if (candidate.length >= 2) {
             sentenceBuffer = remainder;
             dispatchSentence(candidate).catch((err) => {
               this.logger.warn(`Clause dispatch error: ${err}`);
@@ -283,9 +287,9 @@ export class OrchestratorService {
         }
       }
 
-      if (words.length >= 7 && /\s+$/.test(sentenceBuffer)) {
-        const chunk = words.slice(0, 5).join(' ');
-        sentenceBuffer = words.slice(5).join(' ');
+      if (words.length >= 5 && /\s+$/.test(sentenceBuffer)) {
+        const chunk = words.slice(0, 4).join(' ');
+        sentenceBuffer = words.slice(4).join(' ');
         dispatchSentence(chunk).catch((err) => {
           this.logger.warn(`Length dispatch error: ${err}`);
         });

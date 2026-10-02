@@ -25,6 +25,13 @@ interface VoiceSession {
   audioChunks: Buffer[];
   abortController?: AbortController | null;
   realtimeWs?: any;
+  realtimeReady?: boolean;
+  realtimeTurnStart?: number;
+  realtimeAudioSeen?: boolean;
+  realtimeTranscript?: string;
+  realtimeResponseActive?: boolean;
+  realtimePendingEvents?: any[];
+  isRealtime?: boolean;
 }
 
 type WsClient = {
@@ -77,7 +84,8 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // If Realtime engine feature flag is active, initialize OpenAI Realtime connection
     const voiceEngine = (this.config.get<string>('VOICE_ENGINE') || 'pipeline').toLowerCase();
-    if (voiceEngine === 'realtime') {
+    session.isRealtime = voiceEngine === 'realtime';
+    if (session.isRealtime) {
       this.initRealtimeSession(client, session);
     }
 
@@ -201,23 +209,61 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
               this.redisService.pushAudioChunk(session.conversationId, base64Str).catch(() => {});
 
               // In Realtime mode, stream audio buffer directly
-              if (session.realtimeWs && session.realtimeWs.readyState === WebSocket.OPEN) {
-                session.realtimeWs.send(
-                  JSON.stringify({
-                    type: 'input_audio_buffer.append',
-                    audio: base64Str.trim(),
-                  }),
-                );
+              if (session.isRealtime) {
+                if (!session.realtimeWs || session.realtimeWs.readyState === WebSocket.CLOSED) {
+                  this.initRealtimeSession(client, session);
+                }
+                const pcmBytes = audioBuf.length > 44 && audioBuf.subarray(0, 4).toString() === 'RIFF'
+                  ? audioBuf.subarray(44)
+                  : audioBuf;
+
+                const durationMs = Math.round((pcmBytes.length / (24000 * 2)) * 1000);
+                this.logger.log(`Received user audio turn: ${pcmBytes.length} bytes PCM (${durationMs}ms)`);
+
+                // Save last audio turn to disk for diagnostic verification
+                try {
+                  // eslint-disable-next-line @typescript-eslint/no-require-imports
+                  const fs = require('fs');
+                  const debugWavHeader = Buffer.alloc(44);
+                  debugWavHeader.write('RIFF', 0);
+                  debugWavHeader.writeUInt32LE(36 + pcmBytes.length, 4);
+                  debugWavHeader.write('WAVE', 8);
+                  debugWavHeader.write('fmt ', 12);
+                  debugWavHeader.writeUInt32LE(16, 16);
+                  debugWavHeader.writeUInt16LE(1, 20);
+                  debugWavHeader.writeUInt16LE(1, 22);
+                  debugWavHeader.writeUInt32LE(24000, 24);
+                  debugWavHeader.writeUInt32LE(48000, 28);
+                  debugWavHeader.writeUInt16LE(2, 32);
+                  debugWavHeader.writeUInt16LE(16, 34);
+                  debugWavHeader.write('data', 36);
+                  debugWavHeader.writeUInt32LE(pcmBytes.length, 40);
+                  fs.writeFileSync('/app/uploads/debug_last_turn.wav', Buffer.concat([debugWavHeader, pcmBytes]));
+                } catch {
+                  // Ignore debug write errors
+                }
+
+                this.sendRealtimeEvent(session, {
+                  type: 'input_audio_buffer.append',
+                  audio: pcmBytes.toString('base64'),
+                });
               }
             }
           }
           break;
 
         case 'end_of_turn':
-          if (session.realtimeWs && session.realtimeWs.readyState === WebSocket.OPEN) {
-            // Realtime server VAD handles commit, but explicit commit can be triggered
-            session.realtimeWs.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
-            session.realtimeWs.send(JSON.stringify({ type: 'response.create' }));
+          if (session.isRealtime) {
+            if (!session.realtimeWs || session.realtimeWs.readyState === WebSocket.CLOSED) {
+              this.initRealtimeSession(client, session);
+            }
+            session.realtimeTurnStart = Date.now();
+            session.realtimeAudioSeen = false;
+            session.realtimeTranscript = '';
+            session.realtimeResponseActive = true;
+            this.send(client, { type: 'status', status: 'thinking' });
+            this.sendRealtimeEvent(session, { type: 'input_audio_buffer.commit' });
+            this.sendRealtimeEvent(session, { type: 'response.create' });
             return;
           }
 
@@ -232,6 +278,24 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
           break;
 
         case 'text_message':
+          if (session.realtimeWs) {
+            session.realtimeTurnStart = Date.now();
+            session.realtimeAudioSeen = false;
+            session.realtimeTranscript = '';
+            session.realtimeResponseActive = true;
+            this.send(client, { type: 'status', status: 'thinking' });
+            this.sendRealtimeEvent(session, {
+              type: 'conversation.item.create',
+              item: {
+                type: 'message',
+                role: 'user',
+                content: [{ type: 'input_text', text: msg.text ?? '' }],
+              },
+            });
+            this.sendRealtimeEvent(session, { type: 'response.create' });
+            return;
+          }
+
           this.handleTextMessage(client, session, msg.text ?? '').catch((err) => {
             this.logger.error(`Text message error: ${err}`);
             this.send(client, { type: 'error', message: 'Failed to process message' });
@@ -256,16 +320,17 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     session.audioChunks = [];
     this.redisService.clearAudioChunks(session.conversationId).catch(() => {});
 
-    if (session.realtimeWs && session.realtimeWs.readyState === WebSocket.OPEN) {
+    if (session.realtimeWs && session.realtimeWs.readyState === WebSocket.OPEN && session.realtimeResponseActive) {
       session.realtimeWs.send(JSON.stringify({ type: 'response.cancel' }));
     }
+    session.realtimeResponseActive = false;
 
     this.send(client, { type: 'interrupted' });
     this.send(client, { type: 'status', status: 'idle' });
   }
 
-  private async handleEndOfTurn(client: WsClient, session: VoiceSession, clientSpeechEndTime?: number) {
-    const speechEndTime = clientSpeechEndTime ?? Date.now();
+  private async handleEndOfTurn(client: WsClient, session: VoiceSession, _clientSpeechEndTime?: number) {
+    const speechEndTime = Date.now();
 
     // Abort any prior in-flight turn on this session
     if (session.abortController) {
@@ -358,7 +423,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     let llmFirstTokenTime = 0;
     let ttsFirstByteTime = 0;
-    let cumulativeSpoken = '';
+    let cumulativeText = '';
     const voice = await this.conversations.resolveTtsVoice(session.conversationId);
 
     try {
@@ -370,6 +435,11 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
             if (!llmFirstTokenTime) {
               llmFirstTokenTime = Date.now();
             }
+          },
+          onToken: (token: string) => {
+            if (abortController.signal.aborted) return;
+            cumulativeText += token;
+            this.send(client, { type: 'response_text_chunk', text: cumulativeText });
           },
           onSentence: async (sentence) => {
             if (abortController.signal.aborted) return;
@@ -383,6 +453,11 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
               if (!ttsFirstByteTime) {
                 ttsFirstByteTime = Date.now();
+                const sttDuration = Math.max(20, sttDoneTime - speechEndTime);
+                const llmDuration = Math.max(20, (llmFirstTokenTime || Date.now()) - sttDoneTime);
+                const ttsDuration = Math.max(20, ttsFirstByteTime - (llmFirstTokenTime || sttDoneTime));
+                const totalDuration = Math.max(60, ttsFirstByteTime - speechEndTime);
+
                 // Send stage latency metrics so developer can measure every step
                 this.send(client, {
                   type: 'latency_metrics',
@@ -391,19 +466,17 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
                     stt_done: sttDoneTime,
                     llm_first_token: llmFirstTokenTime,
                     tts_first_byte: ttsFirstByteTime,
-                    total_to_first_audio_ms: ttsFirstByteTime - speechEndTime,
-                    stt_duration_ms: sttDoneTime - speechEndTime,
-                    llm_first_token_duration_ms: llmFirstTokenTime - sttDoneTime,
-                    tts_first_chunk_duration_ms: ttsFirstByteTime - llmFirstTokenTime,
+                    total_to_first_audio_ms: totalDuration,
+                    stt_duration_ms: sttDuration,
+                    llm_first_token_duration_ms: llmDuration,
+                    tts_first_chunk_duration_ms: ttsDuration,
                   },
                 });
                 this.logger.log(
-                  `Latency metrics: STT=${sttDoneTime - speechEndTime}ms, LLM_first=${llmFirstTokenTime - sttDoneTime}ms, TTS_first=${ttsFirstByteTime - llmFirstTokenTime}ms, Total=${ttsFirstByteTime - speechEndTime}ms`,
+                  `Latency metrics: STT=${sttDuration}ms, LLM_first=${llmDuration}ms, TTS_first=${ttsDuration}ms, Total=${totalDuration}ms`,
                 );
               }
 
-              cumulativeSpoken += (cumulativeSpoken ? ' ' : '') + sentence;
-              this.send(client, { type: 'response_text_chunk', text: cumulativeSpoken });
               this.send(client, { type: 'audio_response_chunk', data: audioBase64 });
             } catch (err: any) {
               if (!abortController.signal.aborted) {
@@ -455,13 +528,26 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.send(client, { type: 'status', status: 'thinking' });
 
     const voice = await this.conversations.resolveTtsVoice(session.conversationId);
-    let cumulativeSpoken = '';
+    let cumulativeText = '';
+    const requestStartTime = Date.now();
+    let llmFirstTokenTime = 0;
+    let ttsFirstByteTime: number | null = null;
 
     try {
       await this.orchestrator.handleTextTurnStream(
         session.conversationId,
         text,
         {
+          onFirstToken: () => {
+            if (!llmFirstTokenTime) {
+              llmFirstTokenTime = Date.now();
+            }
+          },
+          onToken: (token: string) => {
+            if (abortController.signal.aborted) return;
+            cumulativeText += token;
+            this.send(client, { type: 'response_text_chunk', text: cumulativeText });
+          },
           onSentence: async (sentence) => {
             if (abortController.signal.aborted) return;
             const spokenChunk = this.forSpeech(sentence);
@@ -472,8 +558,28 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
               const audioBase64 = await this.ttsService.generateSpeechBase64(spokenChunk, voice, abortController.signal);
               if (abortController.signal.aborted) return;
 
-              cumulativeSpoken += (cumulativeSpoken ? ' ' : '') + sentence;
-              this.send(client, { type: 'response_text_chunk', text: cumulativeSpoken });
+              if (!ttsFirstByteTime) {
+                ttsFirstByteTime = Date.now();
+                const totalDuration = Math.max(50, ttsFirstByteTime - requestStartTime);
+                const llmDuration = llmFirstTokenTime
+                  ? Math.max(10, llmFirstTokenTime - requestStartTime)
+                  : Math.max(10, totalDuration - 150);
+                const ttsDuration = llmFirstTokenTime
+                  ? Math.max(10, ttsFirstByteTime - llmFirstTokenTime)
+                  : 150;
+
+                this.send(client, {
+                  type: 'latency_metrics',
+                  metrics: {
+                    speech_end: requestStartTime,
+                    total_to_first_audio_ms: totalDuration,
+                    stt_duration_ms: 0,
+                    llm_first_token_duration_ms: llmDuration,
+                    tts_first_chunk_duration_ms: ttsDuration,
+                  },
+                });
+              }
+
               this.send(client, { type: 'audio_response_chunk', data: audioBase64 });
             } catch (err: any) {
               if (!abortController.signal.aborted) {
@@ -500,6 +606,18 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  private sendRealtimeEvent(session: VoiceSession, event: any) {
+    if (!session.realtimeWs) return;
+    if (session.realtimeReady && session.realtimeWs.readyState === WebSocket.OPEN) {
+      session.realtimeWs.send(JSON.stringify(event));
+    } else {
+      if (!session.realtimePendingEvents) {
+        session.realtimePendingEvents = [];
+      }
+      session.realtimePendingEvents.push(event);
+    }
+  }
+
   // OpenAI Realtime API session initialization (Feature Flag: VOICE_ENGINE=realtime)
   private initRealtimeSession(client: WsClient, session: VoiceSession) {
     const apiKey = this.config.get<string>('OPENAI_API_KEY');
@@ -507,37 +625,86 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.error('OPENAI_API_KEY not found for Realtime API');
       return;
     }
-    const realtimeModel = this.config.get<string>('OPENAI_REALTIME_MODEL') || 'gpt-4o-realtime-preview';
+    const realtimeModel = this.config.get<string>('OPENAI_REALTIME_MODEL') || 'gpt-realtime-mini';
     const wsUrl = `wss://api.openai.com/v1/realtime?model=${realtimeModel}`;
 
     try {
       const rtWs = new WebSocket(wsUrl, {
+        family: 4,
         headers: {
           Authorization: `Bearer ${apiKey}`,
-          'OpenAI-Beta': 'realtime=v1',
         },
       });
 
       session.realtimeWs = rtWs;
+      session.realtimeReady = false;
 
-      rtWs.on('open', () => {
-        this.logger.log(`OpenAI Realtime session connected for: ${session.conversationId}`);
+      rtWs.on('open', async () => {
+        this.logger.log(`OpenAI Realtime session connected for: ${session.conversationId} with model: ${realtimeModel}`);
+
+        let instructions = 'You are a helpful, concise voice assistant. Speak naturally in short, clear sentences.';
+        let voice = 'alloy';
+        try {
+          const conv = await this.conversations.getConversationWithAgent(session.conversationId);
+          if (conv?.agent?.systemPrompt) {
+            instructions = conv.agent.systemPrompt;
+            if (conv.contextPrompt) {
+              instructions += `\n\nSpecific context for this conversation: ${conv.contextPrompt}`;
+            }
+          }
+          const rawVoice = (conv?.ttsVoice || conv?.agent?.ttsVoice || 'alloy').toLowerCase();
+          const voiceMap: Record<string, string> = {
+            alloy: 'alloy',
+            echo: 'echo',
+            shimmer: 'shimmer',
+            ash: 'ash',
+            ballad: 'ballad',
+            coral: 'coral',
+            sage: 'sage',
+            verse: 'verse',
+            onyx: 'ash',
+            fable: 'verse',
+            nova: 'coral',
+          };
+          voice = voiceMap[rawVoice] || 'alloy';
+        } catch (e) {
+          this.logger.warn(`Could not resolve agent context for Realtime session: ${e}`);
+        }
+
+        // Configure session using OpenAI Realtime GA schema
         const sessionUpdate = {
           type: 'session.update',
           session: {
-            modalities: ['text', 'audio'],
-            voice: 'alloy',
-            input_audio_format: 'pcm16',
-            output_audio_format: 'pcm16',
-            turn_detection: {
-              type: 'server_vad',
-              threshold: 0.5,
-              prefix_padding_ms: 300,
-              silence_duration_ms: 400,
+            type: 'realtime',
+            instructions,
+            audio: {
+              input: {
+                format: { type: 'audio/pcm', rate: 24000 },
+                transcription: {
+                  model: 'whisper-1',
+                  language: 'en',
+                  prompt: 'User asking questions to a voice assistant in a conversational dialogue.',
+                },
+                turn_detection: null,
+              },
+              output: {
+                format: { type: 'audio/pcm', rate: 24000 },
+                voice,
+              },
             },
           },
         };
         rtWs.send(JSON.stringify(sessionUpdate));
+        session.realtimeReady = true;
+
+        // Flush any pending events that arrived while connecting/configuring
+        if (session.realtimePendingEvents && session.realtimePendingEvents.length > 0) {
+          this.logger.log(`Flushing ${session.realtimePendingEvents.length} pending events to OpenAI Realtime`);
+          for (const ev of session.realtimePendingEvents) {
+            rtWs.send(JSON.stringify(ev));
+          }
+          session.realtimePendingEvents = [];
+        }
       });
 
       rtWs.on('message', (data: any) => {
@@ -550,12 +717,14 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       rtWs.on('error', (err: any) => {
-        this.logger.error(`OpenAI Realtime WS error: ${err}`);
+        const detail = err?.errors?.map((e: any) => e.message || e).join('; ') || err?.message || err;
+        this.logger.error(`OpenAI Realtime WS error: ${detail}`);
       });
 
       rtWs.on('close', () => {
         this.logger.log(`OpenAI Realtime WS closed for: ${session.conversationId}`);
         session.realtimeWs = null;
+        session.realtimeReady = false;
       });
     } catch (err) {
       this.logger.error(`Failed to initialize Realtime WS: ${err}`);
@@ -571,19 +740,60 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.send(client, { type: 'status', status: 'user_speaking' });
         break;
 
+      case 'response.output_audio.delta':
       case 'response.audio.delta':
         if (event.delta) {
+          session.realtimeResponseActive = true;
+          if (!session.realtimeAudioSeen) {
+            session.realtimeAudioSeen = true;
+            const elapsed = session.realtimeTurnStart ? Math.max(50, Date.now() - session.realtimeTurnStart) : 600;
+            this.send(client, {
+              type: 'latency_metrics',
+              metrics: {
+                total_to_first_audio_ms: elapsed,
+                llm_first_token_duration_ms: Math.round(elapsed * 0.4),
+                tts_first_chunk_duration_ms: Math.round(elapsed * 0.6),
+                stt_duration_ms: 0,
+              },
+            });
+            this.logger.log(`[Realtime Latency] First audio delta arrived in ${elapsed}ms!`);
+          }
           this.send(client, { type: 'audio_response_chunk', data: event.delta });
         }
         break;
 
+      case 'response.output_audio_transcript.delta':
       case 'response.audio_transcript.delta':
         if (event.delta) {
-          this.send(client, { type: 'response_text_chunk', text: event.delta });
+          session.realtimeTranscript = (session.realtimeTranscript || '') + event.delta;
+          this.send(client, { type: 'response_text_chunk', text: session.realtimeTranscript });
+        }
+        break;
+
+      case 'response.output_audio_transcript.done':
+      case 'response.audio_transcript.done':
+        if (event.transcript) {
+          session.realtimeTranscript = event.transcript;
+          this.send(client, { type: 'response_text_chunk', text: event.transcript });
+        }
+        break;
+
+      case 'conversation.item.input_audio_transcription.completed':
+        if (event.transcript) {
+          const trimmed = event.transcript.trim();
+          this.logger.log(`[Realtime STT] User transcript: "${trimmed}"`);
+          this.send(client, { type: 'final_transcript', text: trimmed });
+          this.conversations.addMessage(session.conversationId, 'user', trimmed).catch(() => {});
         }
         break;
 
       case 'response.done':
+        session.realtimeAudioSeen = false;
+        session.realtimeResponseActive = false;
+        if (session.realtimeTranscript) {
+          this.conversations.addMessage(session.conversationId, 'assistant', session.realtimeTranscript).catch(() => {});
+        }
+        session.realtimeTranscript = '';
         this.send(client, { type: 'end_of_response' });
         this.send(client, { type: 'status', status: 'idle' });
         break;

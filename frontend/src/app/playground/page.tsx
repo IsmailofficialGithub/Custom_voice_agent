@@ -6,7 +6,11 @@ import { useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/auth-context';
 import { useToast } from '../../context/toast-context';
 import { apiClient, Agent, Conversation } from '../../lib/api-client';
-import { ChatWorkspace } from '../../components/audio/chat-workspace';
+import dynamic from 'next/dynamic';
+const ChatWorkspace = dynamic(
+  () => import('../../components/audio/chat-workspace').then((m) => m.ChatWorkspace),
+  { ssr: false }
+);
 import {
   PanelLeft,
   SquarePen,
@@ -15,6 +19,7 @@ import {
   Bot,
   LayoutDashboard,
   FileText,
+  Plus,
 } from 'lucide-react';
 import {
   TtsGender,
@@ -43,6 +48,60 @@ function PlaygroundContent() {
   const [newChatGender, setNewChatGender] = useState<TtsGender | ''>('');
   const [newChatVoice, setNewChatVoice] = useState<TtsVoiceId | ''>('');
 
+  // Agent creation state
+  const [showCreateAgentModal, setShowCreateAgentModal] = useState(false);
+  const [creatingAgent, setCreatingAgent] = useState(false);
+  const [newAgentName, setNewAgentName] = useState('');
+  const [newAgentPrompt, setNewAgentPrompt] = useState('You are a helpful voice assistant. Answer clearly and concisely.');
+  const [newAgentProvider, setNewAgentProvider] = useState<'openai' | 'claude'>('openai');
+  const [newAgentModel, setNewAgentModel] = useState('gpt-4o');
+  const [newAgentVoice, setNewAgentVoice] = useState<TtsVoiceId>('alloy');
+  const [newAgentGender, setNewAgentGender] = useState<TtsGender>('neutral');
+  const [newAgentTools, setNewAgentTools] = useState<string[]>(['get_time', 'web_search']);
+
+  const openCreateAgentModal = () => {
+    setNewAgentName('');
+    setNewAgentPrompt('You are a helpful voice assistant. Answer clearly and concisely.');
+    setNewAgentProvider('openai');
+    setNewAgentModel('gpt-4o');
+    setNewAgentVoice('alloy');
+    setNewAgentGender('neutral');
+    setNewAgentTools(['get_time', 'web_search']);
+    setShowCreateAgentModal(true);
+  };
+
+  const handleCreateAgent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newAgentName.trim();
+    if (!name) {
+      showError('Please enter an agent name.', 'Create Agent');
+      return;
+    }
+    setCreatingAgent(true);
+    try {
+      const created = await apiClient.createAgent(
+        {
+          name,
+          systemPrompt: newAgentPrompt.trim() || 'You are a helpful voice assistant. Answer clearly and concisely.',
+          llmProvider: newAgentProvider,
+          llmModel: newAgentModel,
+          ttsVoice: newAgentVoice,
+          ttsGender: newAgentGender,
+          enabledTools: newAgentTools,
+        },
+        apiKey
+      );
+      showSuccess('Agent created', `Created ${created.name}`);
+      setAgents((prev) => [created, ...prev]);
+      setSelectedAgentId(created.id);
+      setShowCreateAgentModal(false);
+    } catch (err) {
+      showError(err, 'Create Agent');
+    } finally {
+      setCreatingAgent(false);
+    }
+  };
+
   useEffect(() => {
     loadAgents();
   }, [apiKey]);
@@ -57,6 +116,7 @@ function PlaygroundContent() {
   }, [selectedAgentId, apiKey]);
 
   const loadAgents = async () => {
+    if (!apiKey) return;
     try {
       const list = await apiClient.getAgents(apiKey);
       setAgents(list);
@@ -171,20 +231,42 @@ function PlaygroundContent() {
         </div>
 
         <div className="px-3 pb-3">
-          <label className="mb-1.5 block px-1 text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-            Agent
-          </label>
-          <select
-            value={selectedAgentId}
-            onChange={(e) => setSelectedAgentId(e.target.value)}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 focus:outline-none"
-          >
-            {agents.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center justify-between px-1 mb-1.5">
+            <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+              Agent
+            </label>
+            <button
+              type="button"
+              onClick={openCreateAgentModal}
+              className="flex items-center gap-1 text-[11px] font-medium text-zinc-400 hover:text-white transition"
+              title="Create new agent"
+            >
+              <Plus className="h-3 w-3" />
+              <span>New</span>
+            </button>
+          </div>
+          {agents.length === 0 ? (
+            <button
+              type="button"
+              onClick={openCreateAgentModal}
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-zinc-700 bg-zinc-900/60 px-3 py-2 text-xs font-medium text-zinc-300 hover:border-zinc-500 hover:bg-zinc-800 hover:text-white transition"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Create agent
+            </button>
+          ) : (
+            <select
+              value={selectedAgentId}
+              onChange={(e) => setSelectedAgentId(e.target.value)}
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 focus:outline-none"
+            >
+              {agents.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
@@ -300,6 +382,26 @@ function PlaygroundContent() {
               agentName={selectedAgent?.name || 'Assistant'}
               onError={(err) => showError(err, 'Voice')}
             />
+          ) : agents.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center px-4 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 text-zinc-300 shadow-xl mb-4">
+                <Bot className="h-8 w-8 text-zinc-200" />
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight text-white md:text-3xl">
+                No Voice Agents Available
+              </h1>
+              <p className="mt-2.5 max-w-md text-sm text-zinc-400">
+                To start chatting with realtime voice and testing tools in the playground, create your first agent now.
+              </p>
+              <button
+                type="button"
+                onClick={openCreateAgentModal}
+                className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 shadow-lg"
+              >
+                <Plus className="h-4 w-4" />
+                Create New Agent
+              </button>
+            </div>
           ) : (
             <div className="flex h-full flex-col items-center justify-center px-4">
               <h1 className="text-center text-3xl font-semibold tracking-tight text-white md:text-4xl">
@@ -420,6 +522,180 @@ function PlaygroundContent() {
                 {creating ? 'Creating…' : 'Create'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Agent Modal */}
+      {showCreateAgentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl border border-zinc-700 bg-zinc-900 p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between border-b border-zinc-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-800 text-white">
+                  <Bot className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-white">Create Voice Agent</h3>
+                  <p className="text-xs text-zinc-400">Configure a new agent to chat with immediately</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateAgentModal(false)}
+                className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAgent} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-zinc-300 mb-1">Agent Name</label>
+                <input
+                  type="text"
+                  required
+                  value={newAgentName}
+                  onChange={(e) => setNewAgentName(e.target.value)}
+                  placeholder="e.g. Sales Assistant, Tech Support"
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-300 mb-1">System Instructions / Prompt</label>
+                <textarea
+                  rows={3}
+                  value={newAgentPrompt}
+                  onChange={(e) => setNewAgentPrompt(e.target.value)}
+                  placeholder="Describe agent personality and rules..."
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-zinc-300 mb-1">LLM Provider</label>
+                  <select
+                    value={newAgentProvider}
+                    onChange={(e) => {
+                      const p = e.target.value as 'openai' | 'claude';
+                      setNewAgentProvider(p);
+                      setNewAgentModel(p === 'openai' ? 'gpt-4o' : 'claude-sonnet-4-5');
+                    }}
+                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:outline-none"
+                  >
+                    <option value="openai">OpenAI</option>
+                    <option value="claude">Anthropic Claude</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-300 mb-1">Model</label>
+                  <select
+                    value={newAgentModel}
+                    onChange={(e) => setNewAgentModel(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:outline-none"
+                  >
+                    {newAgentProvider === 'openai' ? (
+                      <>
+                        <option value="gpt-4o">gpt-4o</option>
+                        <option value="gpt-4o-mini">gpt-4o-mini</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="claude-sonnet-4-5">claude-sonnet-4-5</option>
+                        <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet</option>
+                        <option value="claude-3-5-haiku-20241022">claude-3-5-haiku</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-zinc-300 mb-1">Voice Gender</label>
+                  <select
+                    value={newAgentGender}
+                    onChange={(e) => {
+                      const g = e.target.value as TtsGender;
+                      setNewAgentGender(g);
+                      setNewAgentVoice(DEFAULT_VOICE_BY_GENDER[g]);
+                    }}
+                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:outline-none"
+                  >
+                    <option value="neutral">Neutral</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-300 mb-1">TTS Voice</label>
+                  <select
+                    value={newAgentVoice}
+                    onChange={(e) => setNewAgentVoice(e.target.value as TtsVoiceId)}
+                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:outline-none"
+                  >
+                    {voicesForGender(newAgentGender).map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.label} ({v.gender})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-300 mb-1.5">Enabled Capabilities / Tools</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'web_search', label: 'Web Search' },
+                    { id: 'get_time', label: 'Current Time' },
+                    { id: 'search_knowledge_base', label: 'Knowledge Base' },
+                  ].map((tool) => {
+                    const checked = newAgentTools.includes(tool.id);
+                    return (
+                      <label
+                        key={tool.id}
+                        className={`flex items-center gap-2 rounded-lg border p-2 text-xs cursor-pointer transition ${
+                          checked
+                            ? 'border-zinc-500 bg-zinc-800 text-white'
+                            : 'border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:border-zinc-700'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            if (e.target.checked) setNewAgentTools((t) => [...t, tool.id]);
+                            else setNewAgentTools((t) => t.filter((x) => x !== tool.id));
+                          }}
+                          className="rounded border-zinc-700 text-white"
+                        />
+                        <span>{tool.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-2 pt-3 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateAgentModal(false)}
+                  className="rounded-lg px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingAgent}
+                  className="rounded-lg bg-white px-5 py-2 text-sm font-semibold text-black hover:bg-zinc-200 transition disabled:opacity-50"
+                >
+                  {creatingAgent ? 'Creating…' : 'Create Agent'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

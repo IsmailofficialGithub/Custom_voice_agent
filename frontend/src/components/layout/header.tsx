@@ -137,7 +137,7 @@ export function Header() {
                   className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-xs text-[var(--danger)] hover:bg-[var(--bg)]"
                 >
                   <LogOut className="h-3.5 w-3.5" />
-                  Reset user
+                  Sign out
                 </button>
               </div>
             </div>

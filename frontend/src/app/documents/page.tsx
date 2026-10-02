@@ -33,6 +33,7 @@ function DocumentsContent() {
   }, [selectedAgentId]);
 
   const loadAgents = async () => {
+    if (!apiKey) return;
     try {
       const list = await apiClient.getAgents(apiKey);
       setAgents(list);

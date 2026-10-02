@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import authConfig from '../config/auth.json';
 import { apiClient } from '../lib/api-client';
 
@@ -28,6 +28,7 @@ interface AuthContextType {
   setApiKey: (key: string) => void;
   switchUser: (userId: string) => void;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithApiKey: (key: string) => boolean;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
 }
@@ -35,25 +36,22 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const SESSION_KEY = 'axiomra_session';
 
-function readSession(): string {
-  if (typeof window === 'undefined') return '';
-  return localStorage.getItem(SESSION_KEY) || '';
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [apiKey, setApiKeyState] = useState<string>(() => readSession());
-  const [ready] = useState(true);
-  const [currentUser, setCurrentUser] = useState<UserProfile>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('axiomra_user');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch { }
-      }
+  const [apiKey, setApiKeyState] = useState<string>('');
+  const [ready, setReady] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserProfile>(authConfig.demoUsers[0] as UserProfile);
+
+  useEffect(() => {
+    const savedKey = localStorage.getItem(SESSION_KEY) || '';
+    if (savedKey) setApiKeyState(savedKey);
+    const saved = localStorage.getItem('axiomra_user');
+    if (saved) {
+      try {
+        setCurrentUser(JSON.parse(saved));
+      } catch {}
     }
-    return authConfig.demoUsers[0] as UserProfile;
-  });
+    setReady(true);
+  }, []);
 
   const setApiKey = (key: string) => {
     setApiKeyState(key);
@@ -82,6 +80,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: res.email,
       role: 'admin',
       avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(res.email)}`,
+    };
+    setCurrentUser(user);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('axiomra_user', JSON.stringify(user));
+    }
+    return true;
+  };
+
+  const loginWithApiKey = (key: string): boolean => {
+    const trimmed = (key || '').trim();
+    if (!trimmed) throw new Error('API key cannot be empty');
+    setApiKey(trimmed);
+    const user: UserProfile = {
+      id: 'api-key-user',
+      name: 'Developer',
+      email: 'dev@axiomra.ai',
+      role: 'admin',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus',
     };
     setCurrentUser(user);
     if (typeof window !== 'undefined') {
@@ -119,6 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setApiKey,
         switchUser,
         login,
+        loginWithApiKey,
         logout,
         hasPermission,
       }}

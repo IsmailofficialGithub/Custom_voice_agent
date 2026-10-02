@@ -21,6 +21,7 @@ export default function DashboardPage() {
   }, [apiKey]);
 
   const loadDashboardData = async () => {
+    if (!apiKey) return;
     setLoading(true);
     try {
       setAgents(await apiClient.getAgents(apiKey));
