@@ -35,6 +35,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const SESSION_KEY = 'axiomra_session';
+const DEFAULT_KEY = process.env.NEXT_PUBLIC_DEFAULT_API_KEY || 'dev-secret-key-change-me';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [apiKey, setApiKeyState] = useState<string>('');
@@ -42,8 +43,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<UserProfile>(authConfig.demoUsers[0] as UserProfile);
 
   useEffect(() => {
-    const savedKey = localStorage.getItem(SESSION_KEY) || '';
-    if (savedKey) setApiKeyState(savedKey);
+    const savedKey = localStorage.getItem(SESSION_KEY);
+    const activeKey = savedKey !== null && savedKey !== '' ? savedKey : DEFAULT_KEY;
+    if (activeKey) {
+      setApiKeyState(activeKey);
+      if (!savedKey && typeof window !== 'undefined') {
+        localStorage.setItem(SESSION_KEY, activeKey);
+      }
+    }
     const saved = localStorage.getItem('axiomra_user');
     if (saved) {
       try {

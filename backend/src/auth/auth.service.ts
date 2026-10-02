@@ -23,7 +23,7 @@ export class AuthService {
   }
 
   apiKey(): string {
-    return (this.config.get<string>('API_KEY') ?? '').trim().replace(/^["']|["']$/g, '');
+    return (this.config.get<string>('API_KEY') || 'dev-secret-key-change-me').trim().replace(/^["']|["']$/g, '');
   }
 
   login(email: string, password: string): { token: string; email: string } {

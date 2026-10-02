@@ -58,8 +58,9 @@ export interface HealthCheck {
 
 async function fetchWithAuth<T>(path: string, options: RequestInit = {}, apiKey: string): Promise<T> {
   const url = `${BASE_URL}${path}`;
+  const keyToUse = (apiKey || process.env.NEXT_PUBLIC_DEFAULT_API_KEY || '').trim();
   const headers = {
-    'Authorization': `Bearer ${apiKey}`,
+    'Authorization': `Bearer ${keyToUse}`,
     ...options.headers,
   };
 
