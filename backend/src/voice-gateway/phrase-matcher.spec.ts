@@ -68,6 +68,14 @@ describe('phrase-matcher', () => {
       expect(isEndPhraseMatch('Please stop now', 'stop')).toBe(true);
     });
 
+    it('matches phonetic and acoustic misrecognitions of goodbye', () => {
+      expect(isEndPhraseMatch('Good boy', 'goodbye')).toBe(true);
+      expect(isEndPhraseMatch('good boy.', 'goodbye')).toBe(true);
+      expect(isEndPhraseMatch('Cool boy!', 'goodbye')).toBe(true);
+      expect(isEndPhraseMatch('good buy', 'goodbye')).toBe(true);
+      expect(isEndPhraseMatch('cut the call', 'goodbye')).toBe(true);
+    });
+
     it('does not match substring within a different word (e.g. "stopping")', () => {
       expect(isEndPhraseMatch('I am non-stopping today', 'stop')).toBe(false);
     });

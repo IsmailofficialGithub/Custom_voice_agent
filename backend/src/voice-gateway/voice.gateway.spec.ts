@@ -225,4 +225,32 @@ describe('VoiceGateway - Lifecycle & Start/End Phrases', () => {
     expect(sessionEnded).toBeDefined();
     expect(mockConversations.end).toHaveBeenCalledWith('conv-123');
   });
+
+  it('ends session immediately when user says phonetic goodbye like "Good boy" even from standby', async () => {
+    await gateway.handleConnection(mockClient, {
+      url: '/api/v1/voice?conversationId=conv-123&apiKey=valid-key',
+      headers: {},
+    });
+    sentMessages = [];
+
+    const fakeWav = Buffer.alloc(1200);
+    fakeWav.write('RIFF', 0);
+    fakeWav.write('WAVE', 8);
+
+    mockStt.transcribeBuffer.mockResolvedValue('Good boy.');
+    gateway.handleMessageDecorator(
+      mockClient,
+      JSON.stringify({ type: 'audio_chunk', data: fakeWav.toString('base64') }),
+    );
+    await gateway.handleEndOfTurnDecorator(mockClient);
+
+    expect(mockOrchestrator.handleTextTurnStream).not.toHaveBeenCalled();
+    expect(mockTts.generateSpeechBase64).toHaveBeenCalled();
+
+    const sessionEnded = sentMessages.find(
+      (m) => m.type === 'session_ended' && m.reason === 'end_phrase_triggered',
+    );
+    expect(sessionEnded).toBeDefined();
+    expect(mockConversations.end).toHaveBeenCalledWith('conv-123');
+  });
 });

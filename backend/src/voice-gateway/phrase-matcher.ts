@@ -65,36 +65,88 @@ export function isWakePhraseMatch(
   return { matched: true, remainder };
 }
 
+function levenshteinDistance(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      }
+    }
+  }
+
+  return dp[m][n];
+}
+
+function isFuzzySimilar(candidate: string, target: string, maxDistance = 2): boolean {
+  if (!candidate || !target) return false;
+  if (Math.abs(candidate.length - target.length) > maxDistance) return false;
+  const dist = levenshteinDistance(candidate, target);
+  return dist <= maxDistance;
+}
+
 /**
  * Checks if a speech transcript contains the agent's end phrase.
- * Supports exact end phrase, "goodbye" vs "good bye" vs "bye",
- * and universal session termination keywords.
+ * Supports exact end phrase, phonetic/Whisper misrecognitions (e.g. "good boy", "cool boy", "good buy"),
+ * fuzzy similarity matching, and universal session termination keywords.
  */
 export function isEndPhraseMatch(transcript: string, endPhrase: string): boolean {
   const normTranscript = normalizePhrase(transcript);
-  const normEnd = normalizePhrase(endPhrase);
+  const normEnd = normalizePhrase(endPhrase || 'goodbye');
 
   if (!normTranscript) {
     return false;
   }
 
-  // 1. Direct configured phrase match
+  // 1. Direct configured phrase match with word boundaries
   if (normEnd) {
     const endRegex = new RegExp(`(^|\\s)${escapeRegex(normEnd)}(\\s|$)`);
     if (endRegex.test(normTranscript)) {
       return true;
     }
+  }
 
-    // Handle "goodbye" vs "good bye" vs "bye"
-    if (normEnd === 'goodbye' || normEnd === 'good bye' || normEnd === 'bye') {
-      if (/(^|\s)(goodbye|good\s+bye|bye|bye\s+bye)(\s|$)/.test(normTranscript)) {
+  // 2. Whisper acoustic & phonetic misrecognitions for goodbye / bye
+  // Users with accents or background noise frequently get transcribed as "good boy", "cool boy", "good buy", etc.
+  const phoneticGoodbyeRegex =
+    /(^|\s)(good\s*boy|cool\s*boy|good\s*buy|good\s*by|god\s*boy|good\s*boi|good\s*day|goodbye|good\s+bye|bye|bye\s+bye|bye-bye|byebye)(\s|$)/;
+  if (phoneticGoodbyeRegex.test(normTranscript)) {
+    return true;
+  }
+
+  // 3. Universal termination commands
+  const universalRegex =
+    /(^|\s)(goodbye|good\s+bye|bye\s+bye|bye|cut\s+the\s+call|cut\s+call|hang\s+up|disconnect|stop\s+listening|end\s+call|end\s+chat|end\s+conversation|end\s+conference|close\s+chat|exit|quit|stop)(\s|$)/;
+  if (universalRegex.test(normTranscript)) {
+    return true;
+  }
+
+  // 4. Fuzzy word / sliding window comparison with target end phrase & "goodbye" / "good bye"
+  // Only for phrases of length >= 4 to avoid false matches on short words
+  const targetPhrases = [normEnd, 'goodbye', 'good bye'].filter((p) => p && p.length >= 4);
+  const words = normTranscript.split(' ');
+
+  for (const target of targetPhrases) {
+    const targetWords = target.split(' ');
+    const windowSize = targetWords.length;
+
+    // Check sliding window of matching length
+    for (let i = 0; i <= words.length - windowSize; i++) {
+      const windowStr = words.slice(i, i + windowSize).join(' ');
+      if (Math.abs(windowStr.length - target.length) <= 1 && isFuzzySimilar(windowStr, target, 1)) {
         return true;
       }
     }
   }
 
-  // 2. Universal termination commands
-  const universalRegex =
-    /(^|\s)(goodbye|good\s+bye|bye\s+bye|bye|stop\s+listening|end\s+call|end\s+chat|end\s+conversation|end\s+conference|close\s+chat|exit|quit|stop)(\s|$)/;
-  return universalRegex.test(normTranscript);
+  return false;
 }
+

@@ -53,7 +53,7 @@ export class SttService {
         file,
         model: configuredModel,
         temperature: 0,
-        prompt: 'Main tumhari aawaz sunna chahta hoon. Transcribe spoken Roman Urdu, Urdu, Hindi, Hinglish, or English verbatim.',
+        prompt: 'Hey boss, hello, goodbye, good bye, bye, thank you. Main tumhari aawaz sunna chahta hoon. Transcribe spoken English, Roman Urdu, Urdu, or Hindi verbatim.',
       };
       if (configuredLang && configuredLang !== 'auto') {
         sttOptions.language = configuredLang;

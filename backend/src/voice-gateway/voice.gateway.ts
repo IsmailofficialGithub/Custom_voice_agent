@@ -446,7 +446,30 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const voice = await this.conversations.resolveTtsVoice(session.conversationId);
 
-    // Lifecycle State Machine: Standby vs Active vs Ending
+    // 0. End Phrase Check ALWAYS takes precedence (whether in standby or active)
+    const endMatch = isEndPhraseMatch(transcript, session.endPhrase || 'goodbye');
+    if (endMatch) {
+      this.logger.log(`End phrase "${session.endPhrase}" matched for transcript "${transcript}". Speaking farewell.`);
+      session.lifecycleState = 'ending';
+      this.send(client, {
+        type: 'lifecycle_change',
+        state: 'ending',
+      });
+
+      const farewell = session.farewellMessage || 'Goodbye! Talk to you soon.';
+      await this.speakDirectMessage(client, session, farewell, voice, abortController);
+
+      this.send(client, {
+        type: 'session_ended',
+        reason: 'end_phrase_triggered',
+      });
+
+      this.conversations.addMessage(session.conversationId, 'assistant', farewell).catch(() => {});
+      this.conversations.end(session.conversationId).catch(() => {});
+      return;
+    }
+
+    // Lifecycle State Machine: Standby vs Active
     if (session.lifecycleState === 'standby') {
       const wakeMatch = isWakePhraseMatch(transcript, session.startPhrase || 'hey boss');
       if (!wakeMatch.matched) {
@@ -476,28 +499,6 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // If combined phrase ("Hey boss, what is the weather?"), forward remainder to LLM
       transcript = wakeMatch.remainder;
-    } else if (session.lifecycleState === 'active') {
-      const endMatch = isEndPhraseMatch(transcript, session.endPhrase || 'goodbye');
-      if (endMatch) {
-        this.logger.log(`[Active] End phrase "${session.endPhrase}" matched. Speaking farewell.`);
-        session.lifecycleState = 'ending';
-        this.send(client, {
-          type: 'lifecycle_change',
-          state: 'ending',
-        });
-
-        const farewell = session.farewellMessage || 'Goodbye! Talk to you soon.';
-        await this.speakDirectMessage(client, session, farewell, voice, abortController);
-
-        this.send(client, {
-          type: 'session_ended',
-          reason: 'end_phrase_triggered',
-        });
-
-        this.conversations.addMessage(session.conversationId, 'assistant', farewell).catch(() => {});
-        this.conversations.end(session.conversationId).catch(() => {});
-        return;
-      }
     }
 
     // 2. Stream LLM tokens -> Sentence boundary detection -> Immediate TTS chunk generation
@@ -639,6 +640,28 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const voice = await this.conversations.resolveTtsVoice(session.conversationId);
 
+    // 0. End Phrase Check ALWAYS takes precedence
+    const endMatch = isEndPhraseMatch(text, session.endPhrase || 'goodbye');
+    if (endMatch) {
+      session.lifecycleState = 'ending';
+      this.send(client, {
+        type: 'lifecycle_change',
+        state: 'ending',
+      });
+
+      const farewell = session.farewellMessage || 'Goodbye! Talk to you soon.';
+      await this.speakDirectMessage(client, session, farewell, voice, abortController);
+
+      this.send(client, {
+        type: 'session_ended',
+        reason: 'end_phrase_triggered',
+      });
+
+      this.conversations.addMessage(session.conversationId, 'assistant', farewell).catch(() => {});
+      this.conversations.end(session.conversationId).catch(() => {});
+      return;
+    }
+
     // Lifecycle State Machine for typed messages
     if (session.lifecycleState === 'standby') {
       const wakeMatch = isWakePhraseMatch(text, session.startPhrase || 'hey boss');
@@ -663,27 +686,6 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       text = wakeMatch.remainder;
-    } else if (session.lifecycleState === 'active') {
-      const endMatch = isEndPhraseMatch(text, session.endPhrase || 'goodbye');
-      if (endMatch) {
-        session.lifecycleState = 'ending';
-        this.send(client, {
-          type: 'lifecycle_change',
-          state: 'ending',
-        });
-
-        const farewell = session.farewellMessage || 'Goodbye! Talk to you soon.';
-        await this.speakDirectMessage(client, session, farewell, voice, abortController);
-
-        this.send(client, {
-          type: 'session_ended',
-          reason: 'end_phrase_triggered',
-        });
-
-        this.conversations.addMessage(session.conversationId, 'assistant', farewell).catch(() => {});
-        this.conversations.end(session.conversationId).catch(() => {});
-        return;
-      }
     }
 
     if (session.isRealtime && session.realtimeWs && session.realtimeWs.readyState === WebSocket.OPEN) {
@@ -853,23 +855,14 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const sessionUpdate = {
           type: 'session.update',
           session: {
-            type: 'realtime',
             instructions,
-            audio: {
-              input: {
-                format: { type: 'audio/pcm', rate: 24000 },
-                transcription: {
-                  model: 'whisper-1',
-                  language: 'en',
-                  prompt: 'User asking questions to a voice assistant in a conversational dialogue.',
-                },
-                turn_detection: null,
-              },
-              output: {
-                format: { type: 'audio/pcm', rate: 24000 },
-                voice,
-              },
+            voice,
+            input_audio_format: 'pcm16',
+            output_audio_format: 'pcm16',
+            input_audio_transcription: {
+              model: 'whisper-1',
             },
+            turn_detection: null,
           },
         };
         rtWs.send(JSON.stringify(sessionUpdate));
@@ -972,50 +965,50 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.send(client, { type: 'final_transcript', text: trimmed });
           this.conversations.addMessage(session.conversationId, 'user', trimmed).catch(() => {});
 
-          if (session.lifecycleState === 'active') {
-            const endMatch = isEndPhraseMatch(trimmed, session.endPhrase || 'goodbye');
-            if (endMatch) {
-              this.logger.log(
-                `[Realtime Active] End phrase "${session.endPhrase}" matched for transcript "${trimmed}". Ending session.`,
-              );
-              session.lifecycleState = 'ending';
-              if (session.realtimeWs && session.realtimeWs.readyState === WebSocket.OPEN) {
-                try {
-                  session.realtimeWs.send(JSON.stringify({ type: 'response.cancel' }));
-                } catch {
-                  // ignore
-                }
+          const endMatch = isEndPhraseMatch(trimmed, session.endPhrase || 'goodbye');
+          if (endMatch) {
+            this.logger.log(
+              `[Realtime] End phrase "${session.endPhrase}" matched for transcript "${trimmed}". Ending session.`,
+            );
+            session.lifecycleState = 'ending';
+            if (session.realtimeWs && session.realtimeWs.readyState === WebSocket.OPEN) {
+              try {
+                session.realtimeWs.send(JSON.stringify({ type: 'response.cancel' }));
+              } catch {
+                // ignore
               }
-              this.send(client, {
-                type: 'lifecycle_change',
-                state: 'ending',
-              });
-
-              const farewell = session.farewellMessage || 'Goodbye! Talk to you soon.';
-              this.conversations
-                .resolveTtsVoice(session.conversationId)
-                .then(async (voice) => {
-                  const abortController = new AbortController();
-                  session.abortController = abortController;
-                  await this.speakDirectMessage(client, session, farewell, voice, abortController);
-                  this.send(client, {
-                    type: 'session_ended',
-                    reason: 'end_phrase_triggered',
-                  });
-                  this.conversations.addMessage(session.conversationId, 'assistant', farewell).catch(() => {});
-                  this.conversations.end(session.conversationId).catch(() => {});
-                })
-                .catch((err) => {
-                  this.logger.error(`Failed to handle realtime end farewell: ${err}`);
-                  this.send(client, {
-                    type: 'session_ended',
-                    reason: 'end_phrase_triggered',
-                  });
-                  this.conversations.end(session.conversationId).catch(() => {});
-                });
-              return;
             }
-          } else if (session.lifecycleState === 'standby') {
+            this.send(client, {
+              type: 'lifecycle_change',
+              state: 'ending',
+            });
+
+            const farewell = session.farewellMessage || 'Goodbye! Talk to you soon.';
+            this.conversations
+              .resolveTtsVoice(session.conversationId)
+              .then(async (voice) => {
+                const abortController = new AbortController();
+                session.abortController = abortController;
+                await this.speakDirectMessage(client, session, farewell, voice, abortController);
+                this.send(client, {
+                  type: 'session_ended',
+                  reason: 'end_phrase_triggered',
+                });
+                this.conversations.addMessage(session.conversationId, 'assistant', farewell).catch(() => {});
+                this.conversations.end(session.conversationId).catch(() => {});
+              })
+              .catch((err) => {
+                this.logger.error(`Failed to handle realtime end farewell: ${err}`);
+                this.send(client, {
+                  type: 'session_ended',
+                  reason: 'end_phrase_triggered',
+                });
+                this.conversations.end(session.conversationId).catch(() => {});
+              });
+            return;
+          }
+
+          if (session.lifecycleState === 'standby') {
             const wakeMatch = isWakePhraseMatch(trimmed, session.startPhrase || 'hey boss');
             if (!wakeMatch.matched) {
               this.logger.log(
