@@ -18,10 +18,13 @@ model Agent {
   enabledTools String[] @map("enabled_tools")
   llmProvider  String   @default("claude") @map("llm_provider")
   llmModel     String   @default("claude-sonnet-4-5") @map("llm_model")
-  ttsVoice     String   @default("alloy") @map("tts_voice")
-  ttsGender    String   @default("neutral") @map("tts_gender")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  ttsVoice        String   @default("alloy") @map("tts_voice")
+  ttsGender       String   @default("neutral") @map("tts_gender")
+  startPhrase     String   @default("hey boss") @map("start_phrase")
+  endPhrase       String   @default("goodbye") @map("end_phrase")
+  farewellMessage String   @default("Goodbye! Talk to you soon.") @map("farewell_message")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   conversations Conversation[]
   documents     Document[]

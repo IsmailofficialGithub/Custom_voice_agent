@@ -16,6 +16,9 @@ export class AgentsService {
         llmModel: dto.llmModel ?? 'claude-sonnet-4-5',
         ttsVoice: dto.ttsVoice ?? 'alloy',
         ttsGender: dto.ttsGender ?? 'neutral',
+        startPhrase: dto.startPhrase?.trim() || 'hey boss',
+        endPhrase: dto.endPhrase?.trim() || 'goodbye',
+        farewellMessage: dto.farewellMessage?.trim() || 'Goodbye! Talk to you soon.',
       },
     });
   }
@@ -44,6 +47,9 @@ export class AgentsService {
         ...(dto.llmModel && { llmModel: dto.llmModel }),
         ...(dto.ttsVoice && { ttsVoice: dto.ttsVoice }),
         ...(dto.ttsGender && { ttsGender: dto.ttsGender }),
+        ...(dto.startPhrase !== undefined && { startPhrase: dto.startPhrase.trim() }),
+        ...(dto.endPhrase !== undefined && { endPhrase: dto.endPhrase.trim() }),
+        ...(dto.farewellMessage !== undefined && { farewellMessage: dto.farewellMessage.trim() }),
       },
     });
   }

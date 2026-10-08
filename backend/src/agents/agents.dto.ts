@@ -28,6 +28,20 @@ export class CreateAgentDto {
   @IsOptional()
   @IsIn(['male', 'female', 'neutral'])
   ttsGender?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  startPhrase?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  endPhrase?: string;
+
+  @IsOptional()
+  @IsString()
+  farewellMessage?: string;
 }
 
 export class UpdateAgentDto {
@@ -60,4 +74,18 @@ export class UpdateAgentDto {
   @IsOptional()
   @IsIn(['male', 'female', 'neutral'])
   ttsGender?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  startPhrase?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  endPhrase?: string;
+
+  @IsOptional()
+  @IsString()
+  farewellMessage?: string;
 }
