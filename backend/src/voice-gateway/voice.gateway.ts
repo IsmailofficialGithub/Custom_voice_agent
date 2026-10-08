@@ -15,6 +15,7 @@ import { SttService } from '../providers/stt/stt.service';
 import { TtsService } from '../providers/tts/tts.service';
 import { RedisService } from '../redis/redis.service';
 import { AuthService } from '../auth/auth.service';
+import { isWakePhraseMatch, isEndPhraseMatch } from './phrase-matcher';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const WebSocket = require('ws');
@@ -32,6 +33,10 @@ interface VoiceSession {
   realtimeResponseActive?: boolean;
   realtimePendingEvents?: any[];
   isRealtime?: boolean;
+  lifecycleState?: 'standby' | 'active' | 'ending';
+  startPhrase?: string;
+  endPhrase?: string;
+  farewellMessage?: string;
 }
 
 type WsClient = {
@@ -58,7 +63,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly authService: AuthService,
   ) {}
 
-  handleConnection(client: WsClient, req: { url?: string; headers: Record<string, string | string[] | undefined> }) {
+  async handleConnection(client: WsClient, req: { url?: string; headers: Record<string, string | string[] | undefined> }) {
     const url = req.url ?? '';
     const urlParams = new URLSearchParams(url.split('?')[1] ?? '');
     const match = url.match(/\/api\/v1\/voice\/([^?]+)/);
@@ -71,16 +76,37 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
+    let startPhrase = 'hey boss';
+    let endPhrase = 'goodbye';
+    let farewellMessage = 'Goodbye! Talk to you soon.';
+
+    try {
+      const conv = await this.conversations.getConversationWithAgent(conversationId);
+      if (conv?.agent) {
+        startPhrase = conv.agent.startPhrase || startPhrase;
+        endPhrase = conv.agent.endPhrase || endPhrase;
+        farewellMessage = conv.agent.farewellMessage || farewellMessage;
+      }
+    } catch {
+      // fallback to defaults if conversation lookup fails
+    }
+
     const session: VoiceSession = {
       conversationId,
       authenticated: true,
       audioChunks: [],
       abortController: null,
       realtimeWs: null,
+      lifecycleState: 'standby',
+      startPhrase,
+      endPhrase,
+      farewellMessage,
     };
 
     this.sessions.set(client, session);
-    this.logger.log(`Voice session connected: ${conversationId}`);
+    this.logger.log(
+      `Voice session connected: ${conversationId} [standby, start="${startPhrase}", end="${endPhrase}"]`,
+    );
 
     // If Realtime engine feature flag is active, initialize OpenAI Realtime connection
     const voiceEngine = (this.config.get<string>('VOICE_ENGINE') || 'pipeline').toLowerCase();
@@ -92,7 +118,21 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Persist session metadata in Redis with 10 min TTL
     this.redisService.setSession(conversationId, { authenticated: true, connectedAt: Date.now() }, 600).catch(() => {});
 
-    this.send(client, { type: 'connected', conversationId, engine: voiceEngine });
+    this.send(client, {
+      type: 'connected',
+      conversationId,
+      engine: voiceEngine,
+      lifecycleState: 'standby',
+      startPhrase,
+      endPhrase,
+    });
+    this.send(client, {
+      type: 'lifecycle_change',
+      state: 'standby',
+      startPhrase,
+      endPhrase,
+    });
+    this.send(client, { type: 'status', status: 'standby' });
   }
 
   handleDisconnect(client: WsClient) {
@@ -118,33 +158,33 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('message')
-  handleMessageDecorator(@ConnectedSocket() client: WsClient, @MessageBody() data: unknown) {
-    this.processIncomingData(client, data as Buffer | string);
+  async handleMessageDecorator(@ConnectedSocket() client: WsClient, @MessageBody() data: unknown) {
+    return this.processIncomingData(client, data as Buffer | string);
   }
 
   @SubscribeMessage('text_message')
-  handleTextMessageDecorator(@ConnectedSocket() client: WsClient, @MessageBody() data: unknown) {
+  async handleTextMessageDecorator(@ConnectedSocket() client: WsClient, @MessageBody() data: unknown) {
     const text = typeof data === 'string' ? data : (data as { text?: string })?.text;
-    this.processIncomingData(client, { type: 'text_message', text });
+    return this.processIncomingData(client, { type: 'text_message', text });
   }
 
   @SubscribeMessage('audio_chunk')
-  handleAudioChunkDecorator(@ConnectedSocket() client: WsClient, @MessageBody() data: unknown) {
+  async handleAudioChunkDecorator(@ConnectedSocket() client: WsClient, @MessageBody() data: unknown) {
     const chunk = typeof data === 'string' ? data : (data as { data?: string })?.data;
-    this.processIncomingData(client, { type: 'audio_chunk', data: chunk });
+    return this.processIncomingData(client, { type: 'audio_chunk', data: chunk });
   }
 
   @SubscribeMessage('end_of_turn')
-  handleEndOfTurnDecorator(@ConnectedSocket() client: WsClient) {
-    this.processIncomingData(client, { type: 'end_of_turn' });
+  async handleEndOfTurnDecorator(@ConnectedSocket() client: WsClient) {
+    return this.processIncomingData(client, { type: 'end_of_turn' });
   }
 
   @SubscribeMessage('interrupt')
-  handleInterruptDecorator(@ConnectedSocket() client: WsClient) {
-    this.processIncomingData(client, { type: 'interrupt' });
+  async handleInterruptDecorator(@ConnectedSocket() client: WsClient) {
+    return this.processIncomingData(client, { type: 'interrupt' });
   }
 
-  private processIncomingData(client: WsClient, rawData: Buffer | string | Record<string, unknown>) {
+  private async processIncomingData(client: WsClient, rawData: Buffer | string | Record<string, unknown>): Promise<void> {
     try {
       const session = this.sessions.get(client);
       if (!session?.authenticated) {
@@ -267,10 +307,12 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
           }
 
-          this.handleEndOfTurn(client, session, msg.speech_end).catch((err) => {
+          try {
+            await this.handleEndOfTurn(client, session, msg.speech_end);
+          } catch (err) {
             this.logger.error(`End of turn processing error: ${err}`);
             this.send(client, { type: 'error', message: 'Failed to process voice turn' });
-          });
+          }
           break;
 
         case 'interrupt':
@@ -296,10 +338,12 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
             return;
           }
 
-          this.handleTextMessage(client, session, msg.text ?? '').catch((err) => {
+          try {
+            await this.handleTextMessage(client, session, msg.text ?? '');
+          } catch (err) {
             this.logger.error(`Text message error: ${err}`);
             this.send(client, { type: 'error', message: 'Failed to process message' });
-          });
+          }
           break;
 
         default:
@@ -411,12 +455,68 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (abortController.signal.aborted) return;
 
     if (!transcript || transcript.trim().length === 0) {
-      this.send(client, { type: 'status', status: 'idle' });
+      this.send(client, { type: 'status', status: session.lifecycleState === 'standby' ? 'standby' : 'idle' });
       this.send(client, { type: 'end_of_response' });
       return;
     }
 
     this.send(client, { type: 'final_transcript', text: transcript });
+
+    const voice = await this.conversations.resolveTtsVoice(session.conversationId);
+
+    // Lifecycle State Machine: Standby vs Active vs Ending
+    if (session.lifecycleState === 'standby') {
+      const wakeMatch = isWakePhraseMatch(transcript, session.startPhrase || 'hey boss');
+      if (!wakeMatch.matched) {
+        this.logger.log(
+          `[Standby] Transcript "${transcript}" does not match wake phrase "${session.startPhrase}". Remaining in standby.`,
+        );
+        this.send(client, { type: 'status', status: 'standby' });
+        this.send(client, { type: 'end_of_response' });
+        return;
+      }
+
+      this.logger.log(`[Standby] Wake phrase "${session.startPhrase}" matched! Transitioning to active.`);
+      session.lifecycleState = 'active';
+      this.send(client, {
+        type: 'lifecycle_change',
+        state: 'active',
+        startPhrase: session.startPhrase,
+        endPhrase: session.endPhrase,
+      });
+
+      // If standalone wake phrase ("Hey boss"), speak greeting directly without calling LLM
+      if (!wakeMatch.remainder || wakeMatch.remainder.trim().length === 0) {
+        const greetingText = "Hey! I'm listening, how can I help you?";
+        await this.speakDirectMessage(client, session, greetingText, voice, abortController);
+        return;
+      }
+
+      // If combined phrase ("Hey boss, what is the weather?"), forward remainder to LLM
+      transcript = wakeMatch.remainder;
+    } else if (session.lifecycleState === 'active') {
+      const endMatch = isEndPhraseMatch(transcript, session.endPhrase || 'goodbye');
+      if (endMatch) {
+        this.logger.log(`[Active] End phrase "${session.endPhrase}" matched. Speaking farewell.`);
+        session.lifecycleState = 'ending';
+        this.send(client, {
+          type: 'lifecycle_change',
+          state: 'ending',
+        });
+
+        const farewell = session.farewellMessage || 'Goodbye! Talk to you soon.';
+        await this.speakDirectMessage(client, session, farewell, voice, abortController);
+
+        this.send(client, {
+          type: 'session_ended',
+          reason: 'end_phrase_triggered',
+        });
+
+        this.conversations.addMessage(session.conversationId, 'assistant', farewell).catch(() => {});
+        this.conversations.end(session.conversationId).catch(() => {});
+        return;
+      }
+    }
 
     // 2. Stream LLM tokens -> Sentence boundary detection -> Immediate TTS chunk generation
     this.send(client, { type: 'status', status: 'thinking' });
@@ -424,7 +524,6 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     let llmFirstTokenTime = 0;
     let ttsFirstByteTime = 0;
     let cumulativeText = '';
-    const voice = await this.conversations.resolveTtsVoice(session.conversationId);
 
     try {
       await this.orchestrator.handleTextTurnStream(
@@ -503,6 +602,36 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  private async speakDirectMessage(
+    client: WsClient,
+    session: VoiceSession,
+    text: string,
+    voice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer',
+    abortController: AbortController,
+  ) {
+    this.send(client, { type: 'response_text_chunk', text });
+    this.send(client, { type: 'status', status: 'generating_speech' });
+    try {
+      const spokenChunk = this.forSpeech(text);
+      if (spokenChunk) {
+        const audioBase64 = await this.ttsService.generateSpeechBase64(spokenChunk, voice, abortController.signal);
+        if (!abortController.signal.aborted) {
+          this.send(client, { type: 'audio_response_chunk', data: audioBase64 });
+        }
+      }
+      if (!abortController.signal.aborted) {
+        this.send(client, { type: 'status', status: 'idle' });
+        this.send(client, { type: 'end_of_response' });
+      }
+    } catch (err: any) {
+      if (!abortController.signal.aborted) {
+        this.logger.warn(`Direct speech generation failed: ${err}`);
+        this.send(client, { type: 'status', status: 'idle' });
+        this.send(client, { type: 'end_of_response' });
+      }
+    }
+  }
+
   private async handleTextMessage(client: WsClient, session: VoiceSession, text: string) {
     // Rate Limiting Check
     const limit = this.config.get<number>('VOICE_RATE_LIMIT_TURNS', 30);
@@ -525,9 +654,58 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     session.abortController = abortController;
 
     this.send(client, { type: 'final_transcript', text });
-    this.send(client, { type: 'status', status: 'thinking' });
 
     const voice = await this.conversations.resolveTtsVoice(session.conversationId);
+
+    // Lifecycle State Machine for typed messages
+    if (session.lifecycleState === 'standby') {
+      const wakeMatch = isWakePhraseMatch(text, session.startPhrase || 'hey boss');
+      if (!wakeMatch.matched) {
+        this.send(client, { type: 'status', status: 'standby' });
+        this.send(client, { type: 'end_of_response' });
+        return;
+      }
+
+      session.lifecycleState = 'active';
+      this.send(client, {
+        type: 'lifecycle_change',
+        state: 'active',
+        startPhrase: session.startPhrase,
+        endPhrase: session.endPhrase,
+      });
+
+      if (!wakeMatch.remainder || wakeMatch.remainder.trim().length === 0) {
+        const greetingText = "Hey! I'm listening, how can I help you?";
+        await this.speakDirectMessage(client, session, greetingText, voice, abortController);
+        return;
+      }
+
+      text = wakeMatch.remainder;
+    } else if (session.lifecycleState === 'active') {
+      const endMatch = isEndPhraseMatch(text, session.endPhrase || 'goodbye');
+      if (endMatch) {
+        session.lifecycleState = 'ending';
+        this.send(client, {
+          type: 'lifecycle_change',
+          state: 'ending',
+        });
+
+        const farewell = session.farewellMessage || 'Goodbye! Talk to you soon.';
+        await this.speakDirectMessage(client, session, farewell, voice, abortController);
+
+        this.send(client, {
+          type: 'session_ended',
+          reason: 'end_phrase_triggered',
+        });
+
+        this.conversations.addMessage(session.conversationId, 'assistant', farewell).catch(() => {});
+        this.conversations.end(session.conversationId).catch(() => {});
+        return;
+      }
+    }
+
+    this.send(client, { type: 'status', status: 'thinking' });
+
     let cumulativeText = '';
     const requestStartTime = Date.now();
     let llmFirstTokenTime = 0;
