@@ -694,6 +694,8 @@ function PlaygroundContent() {
                     );
                   })}
                 </div>
+              </div>
+
               {/* Start & End Lifecycle Trigger Phrases */}
               <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3.5 space-y-3">
                 <div className="flex items-center justify-between">
