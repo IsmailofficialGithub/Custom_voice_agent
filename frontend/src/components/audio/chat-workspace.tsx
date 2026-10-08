@@ -67,6 +67,10 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
   const [orbTheme, setOrbTheme] = useState<OrbTheme>('emerald');
   const [showTextInput, setShowTextInput] = useState(false);
   const [showFullHistory, setShowFullHistory] = useState(false);
+  const [lifecycleState, setLifecycleState] = useState<'standby' | 'active' | 'ending'>('standby');
+  const [startPhrase, setStartPhrase] = useState('hey boss');
+  const [endPhrase, setEndPhrase] = useState('goodbye');
+  const [sessionEndedReason, setSessionEndedReason] = useState<string | null>(null);
 
   // Live turn timer & metrics
   const [turnElapsedMs, setTurnElapsedMs] = useState<number | null>(null);
@@ -173,6 +177,18 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
             },
             onError: (e) => onError?.(e),
             onAudioLevelChange: (l) => setAudioLevel(l),
+            onLifecycleChange: (state, start, end) => {
+              setLifecycleState(state);
+              if (start) setStartPhrase(start);
+              if (end) setEndPhrase(end);
+            },
+            onSessionEnded: (reason) => {
+              setSessionEndedReason(reason);
+              setCallState('disconnected');
+              setTimeout(() => {
+                onClose?.();
+              }, 1500);
+            },
             onLatencyMetrics: (metrics) => {
               const latency: LatencyInfo = {
                 totalMs: Math.max(
@@ -313,16 +329,19 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
     } catch {}
   };
 
-  // Status headline text like the screenshots
+  // Status headline text
   const getStatusHeadline = () => {
+    if (sessionEndedReason) return 'Voice session ended';
     if (isPaused) return 'Voice session paused';
     if (!ready) return 'Connecting to voice core…';
+    if (lifecycleState === 'standby') return `Say "${startPhrase}" to wake up`;
+    if (lifecycleState === 'ending') return `${agentName} is saying goodbye…`;
     if (callState === 'user_speaking') return "Psst... Speak up, I'm listening";
     if (callState === 'transcribing') return 'Understanding what you said…';
     if (callState === 'thinking') return 'Thinking…';
     if (callState === 'generating_speech' || callState === 'speaking') return `${agentName} is speaking…`;
     if (vadMode === 'manual') return 'Tap the microphone to speak';
-    return "Psst... Speak up, I'm listening";
+    return `Active • Say "${endPhrase}" to stop`;
   };
 
   const isEmerald = orbTheme === 'emerald';
@@ -353,9 +372,36 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
             />
           </div>
           <div>
-            <h1 className="text-sm font-semibold tracking-tight text-zinc-100">{agentName}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-semibold tracking-tight text-zinc-100">{agentName}</h1>
+              {ready && (
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border ${
+                    lifecycleState === 'standby'
+                      ? 'bg-amber-500/10 text-amber-300 border-amber-500/30 animate-pulse'
+                      : lifecycleState === 'ending'
+                      ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
+                      : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                  }`}
+                >
+                  {lifecycleState === 'standby'
+                    ? `Say "${startPhrase}"`
+                    : lifecycleState === 'ending'
+                    ? 'Ending call…'
+                    : `Say "${endPhrase}" to stop`}
+                </span>
+              )}
+            </div>
             <p className="text-[11px] text-zinc-400">
-              {ready ? (isPaused ? 'Paused' : 'Live Voice Session') : 'Connecting…'}
+              {ready
+                ? isPaused
+                  ? 'Paused'
+                  : lifecycleState === 'standby'
+                  ? `Standby — Say "${startPhrase}" to start`
+                  : lifecycleState === 'ending'
+                  ? 'Ending session…'
+                  : `Active • Say "${endPhrase}" to end`
+                : 'Connecting…'}
             </p>
           </div>
         </div>

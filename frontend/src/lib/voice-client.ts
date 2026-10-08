@@ -4,6 +4,7 @@
 
 export type VoiceState =
   | 'idle'
+  | 'standby'
   | 'connecting'
   | 'connected'
   | 'listening'
@@ -28,6 +29,8 @@ export interface VoiceEventHandlers {
   onSpeechStart?: () => void;
   onSpeechEnd?: () => void;
   onLatencyMetrics?: (metrics: Record<string, number>) => void;
+  onLifecycleChange?: (state: 'standby' | 'active' | 'ending', startPhrase?: string, endPhrase?: string) => void;
+  onSessionEnded?: (reason: string) => void;
 }
 
 export class VoiceSessionClient {
@@ -84,6 +87,10 @@ export class VoiceSessionClient {
   private vadMode: 'auto' | 'manual' = 'auto';
   private isManualRecording = false;
 
+  private lifecycleState: 'standby' | 'active' | 'ending' = 'standby';
+  private startPhrase = 'hey boss';
+  private endPhrase = 'goodbye';
+
   constructor(
     private readonly conversationId: string,
     private readonly apiKey: string,
@@ -93,6 +100,18 @@ export class VoiceSessionClient {
 
   public get state(): VoiceState {
     return this.currentState;
+  }
+
+  public get lifecycle(): 'standby' | 'active' | 'ending' {
+    return this.lifecycleState;
+  }
+
+  public get agentStartPhrase(): string {
+    return this.startPhrase;
+  }
+
+  public get agentEndPhrase(): string {
+    return this.endPhrase;
   }
 
   public get muted(): boolean {
@@ -217,15 +236,57 @@ export class VoiceSessionClient {
   }
 
   private handleIncomingMessage(
-    msg: { type: string; conversationId?: string; text?: string; data?: string; status?: VoiceState; message?: string },
+    msg: {
+      type: string;
+      conversationId?: string;
+      text?: string;
+      data?: string;
+      status?: VoiceState;
+      message?: string;
+      state?: 'standby' | 'active' | 'ending';
+      lifecycleState?: 'standby' | 'active' | 'ending';
+      startPhrase?: string;
+      endPhrase?: string;
+      reason?: string;
+    },
     resolve: () => void,
   ) {
     switch (msg.type) {
       case 'connected':
+        if (msg.lifecycleState) {
+          this.lifecycleState = msg.lifecycleState;
+        }
+        if (msg.startPhrase) this.startPhrase = msg.startPhrase;
+        if (msg.endPhrase) this.endPhrase = msg.endPhrase;
+        if (this.lifecycleState === 'standby' && this.currentState !== 'idle') {
+          this.updateState('standby');
+        }
         if (msg.conversationId) {
           this.handlers.onConnected?.(msg.conversationId);
           resolve();
         }
+        break;
+      case 'lifecycle_change':
+        if (msg.state) {
+          this.lifecycleState = msg.state;
+        }
+        if (msg.startPhrase) this.startPhrase = msg.startPhrase;
+        if (msg.endPhrase) this.endPhrase = msg.endPhrase;
+        if (this.lifecycleState === 'standby') {
+          this.updateState('standby');
+        } else if (this.lifecycleState === 'active') {
+          if (this.currentState === 'standby') {
+            this.updateState('listening');
+          }
+        }
+        this.handlers.onLifecycleChange?.(this.lifecycleState, this.startPhrase, this.endPhrase);
+        break;
+      case 'session_ended':
+        this.updateState('disconnected');
+        this.handlers.onSessionEnded?.(msg.reason || 'end_phrase_triggered');
+        setTimeout(() => {
+          this.disconnect();
+        }, 300);
         break;
       case 'partial_transcript':
         if (this.isStaleResponse()) return;
@@ -298,7 +359,7 @@ export class VoiceSessionClient {
   async startCall(): Promise<void> {
     try {
       await this.initMicrophone();
-      this.updateState('listening');
+      this.updateState(this.lifecycleState === 'standby' ? 'standby' : 'listening');
     } catch {
       this.updateState('error');
       this.handlers.onError?.('Microphone access denied or unsupported');
@@ -519,7 +580,7 @@ export class VoiceSessionClient {
       this.audioContext.resume().catch(() => {});
     }
     if (this.currentState !== 'user_speaking') {
-      this.updateState('listening');
+      this.updateState(this.lifecycleState === 'standby' ? 'standby' : 'listening');
     }
   }
 
