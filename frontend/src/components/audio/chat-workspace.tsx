@@ -349,24 +349,29 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
   const lastUserMessage = [...messages].reverse().find((m) => m.sender === 'user');
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#09090b] text-white">
-      {/* Background ambient radial glow matching active theme */}
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-[#070709] text-white select-none">
+      {/* Dynamic atmospheric mesh lighting */}
       <div
-        className={`pointer-events-none absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 h-[420px] w-[420px] rounded-full blur-[120px] opacity-25 transition-colors duration-700 ${
+        className={`pointer-events-none absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 h-[520px] w-[520px] rounded-full blur-[140px] opacity-20 transition-all duration-1000 ${
           isEmerald ? 'bg-emerald-500' : 'bg-purple-600'
+        }`}
+      />
+      <div
+        className={`pointer-events-none absolute -top-24 right-1/4 h-[350px] w-[350px] rounded-full blur-[130px] opacity-15 transition-all duration-1000 ${
+          isEmerald ? 'bg-teal-400' : 'bg-indigo-600'
         }`}
       />
 
       {/* Top Header Bar */}
-      <div className="relative z-10 flex shrink-0 items-center justify-between border-b border-white/5 bg-zinc-950/40 px-5 py-3 backdrop-blur-md">
+      <div className="relative z-10 flex shrink-0 items-center justify-between border-b border-white/[0.08] bg-zinc-950/60 px-5 py-3 backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-zinc-900 border border-white/10 shadow-inner">
+          <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-900/90 border border-white/10 shadow-inner">
             <span
-              className={`h-2.5 w-2.5 rounded-full ${
+              className={`h-2.5 w-2.5 rounded-full transition-all duration-500 ${
                 ready && !isPaused
                   ? isEmerald
-                    ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
-                    : 'bg-purple-400 shadow-[0_0_8px_#c084fc]'
+                    ? 'bg-emerald-400 shadow-[0_0_10px_#34d399]'
+                    : 'bg-purple-400 shadow-[0_0_10px_#c084fc]'
                   : 'bg-zinc-500'
               }`}
             />
@@ -376,23 +381,23 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
               <h1 className="text-sm font-semibold tracking-tight text-zinc-100">{agentName}</h1>
               {ready && (
                 <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border ${
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold border tracking-wide transition-all ${
                     lifecycleState === 'standby'
-                      ? 'bg-amber-500/10 text-amber-300 border-amber-500/30 animate-pulse'
+                      ? 'bg-amber-500/10 text-amber-300 border-amber-500/30 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.15)]'
                       : lifecycleState === 'ending'
-                      ? 'bg-rose-500/10 text-rose-300 border-rose-500/30'
-                      : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                      ? 'bg-rose-500/10 text-rose-300 border-rose-500/30 shadow-[0_0_12px_rgba(244,63,94,0.15)]'
+                      : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.15)]'
                   }`}
                 >
                   {lifecycleState === 'standby'
                     ? `Say "${startPhrase}"`
                     : lifecycleState === 'ending'
                     ? 'Ending call…'
-                    : `Say "${endPhrase}" to stop`}
+                    : `Active • "${endPhrase}" to stop`}
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-[11px] text-zinc-400 font-mono tracking-tight">
               {ready
                 ? isPaused
                   ? 'Paused'
@@ -400,36 +405,36 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
                   ? `Standby — Say "${startPhrase}" to start`
                   : lifecycleState === 'ending'
                   ? 'Ending session…'
-                  : `Active • Say "${endPhrase}" to end`
-                : 'Connecting…'}
+                  : `Active • Say "${endPhrase}" to stop`
+                : 'Connecting to voice core…'}
             </p>
           </div>
         </div>
 
         {/* Action Controls in Top Bar */}
         <div className="flex items-center gap-2">
-          {/* Theme switcher (Emerald vs Aurora) */}
-          <div className="flex items-center rounded-full border border-white/10 bg-zinc-900/80 p-0.5 shadow-sm">
+          {/* Theme switcher */}
+          <div className="flex items-center rounded-full border border-white/10 bg-zinc-900/80 p-0.5 shadow-inner">
             <button
               type="button"
               onClick={() => setOrbTheme('emerald')}
-              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
-                isEmerald ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'text-zinc-400 hover:text-zinc-200'
+              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all ${
+                isEmerald ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
               }`}
               title="Emerald Bio-Glow Theme"
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
               Emerald
             </button>
             <button
               type="button"
               onClick={() => setOrbTheme('aurora')}
-              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
-                !isEmerald ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'text-zinc-400 hover:text-zinc-200'
+              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all ${
+                !isEmerald ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
               }`}
               title="Iridescent Aurora Theme"
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
+              <span className="h-1.5 w-1.5 rounded-full bg-purple-400 shadow-[0_0_6px_#c084fc]" />
               Aurora
             </button>
           </div>
@@ -438,7 +443,7 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
           <button
             type="button"
             onClick={resetChat}
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-zinc-900 text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-100"
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-zinc-900/80 text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-100 active:scale-95 shadow-sm"
             title="Reset conversation"
           >
             <RotateCcw className="h-3.5 w-3.5" />
@@ -448,10 +453,10 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
           <button
             type="button"
             onClick={togglePause}
-            className={`flex h-8 w-8 items-center justify-center rounded-full border border-white/10 transition ${
+            className={`flex h-8 w-8 items-center justify-center rounded-xl border transition active:scale-95 shadow-sm ${
               isPaused
                 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
+                : 'border-white/10 bg-zinc-900/80 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
             }`}
             title={isPaused ? 'Resume voice' : 'Pause voice'}
           >
@@ -462,7 +467,7 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
             <button
               type="button"
               onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-zinc-900 text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-100"
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-zinc-900/80 text-zinc-400 transition hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-500/30 active:scale-95 shadow-sm"
               title="Close chat"
             >
               <X className="h-3.5 w-3.5" />
@@ -475,19 +480,35 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
       <div className="relative flex flex-1 flex-col items-center justify-between overflow-y-auto px-4 py-4 md:px-8">
         {/* Dynamic Status Headline */}
         <div className="my-2 flex flex-col items-center text-center">
-          <h2 className="text-xl md:text-2xl font-light tracking-tight text-zinc-200 transition-all duration-300">
+          <h2 className="text-xl md:text-2xl font-normal tracking-tight bg-gradient-to-b from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent transition-all duration-300 drop-shadow-sm">
             {getStatusHeadline()}
           </h2>
           {turnElapsedMs !== null && (
-            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-950/40 px-3 py-0.5 text-xs font-mono text-emerald-400">
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-950/60 px-3 py-0.5 text-xs font-mono text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.2)]">
               <Zap className="h-3 w-3 animate-pulse" />
               {(turnElapsedMs / 1000).toFixed(2)}s turn
             </div>
           )}
         </div>
 
-        {/* Centered 3D Glowing AI Globe */}
-        <div className="my-auto flex flex-col items-center justify-center">
+        {/* Centered 3D Glowing AI Globe with Dynamic Pulse Halo */}
+        <div className="relative my-auto flex flex-col items-center justify-center">
+          {/* Subtle concentric soundwave halo rings */}
+          {(callState === 'speaking' || callState === 'user_speaking') && (
+            <>
+              <div
+                className={`pointer-events-none absolute h-[320px] w-[320px] rounded-full border border-white/5 animate-ping opacity-20 ${
+                  isEmerald ? 'border-emerald-400' : 'border-purple-400'
+                }`}
+              />
+              <div
+                className={`pointer-events-none absolute h-[360px] w-[360px] rounded-full border border-white/5 animate-pulse opacity-10 ${
+                  isEmerald ? 'border-emerald-300' : 'border-purple-300'
+                }`}
+              />
+            </>
+          )}
+
           <AiOrb
             audioLevel={audioLevel}
             state={callState}
@@ -501,28 +522,29 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
         <div className="w-full max-w-xl px-2 mb-2 flex flex-col items-center">
           {/* Real-time partial user transcript */}
           {partial ? (
-            <div className="w-full animate-fade-in rounded-2xl border border-white/10 bg-zinc-900/70 p-4 text-center backdrop-blur-md shadow-xl">
-              <p className="text-xs uppercase font-semibold tracking-wider text-emerald-400 mb-1">
+            <div className="w-full animate-fade-in rounded-2xl border border-white/10 bg-zinc-900/80 p-4 text-center backdrop-blur-xl shadow-2xl">
+              <p className="text-[10px] uppercase font-bold tracking-widest text-emerald-400 mb-1 flex items-center justify-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 You are saying…
               </p>
-              <p className="text-[15px] italic text-zinc-200 leading-relaxed">
+              <p className="text-[15px] italic text-zinc-100 leading-relaxed font-normal">
                 "{partial}"
               </p>
             </div>
           ) : callState === 'user_speaking' && !partial ? (
-            <div className="rounded-full border border-white/10 bg-zinc-900/60 px-4 py-1.5 text-xs text-zinc-400 backdrop-blur-sm animate-pulse">
+            <div className="rounded-full border border-white/10 bg-zinc-900/70 px-4 py-1.5 text-xs text-zinc-300 backdrop-blur-md animate-pulse shadow-md">
               Listening to your voice…
             </div>
           ) : lastAssistantMessage ? (
-            <div className="w-full rounded-2xl border border-white/5 bg-zinc-900/40 p-4 backdrop-blur-md shadow-lg transition hover:bg-zinc-900/60">
+            <div className="w-full rounded-2xl border border-white/[0.08] bg-zinc-900/50 p-4 backdrop-blur-xl shadow-xl transition-all hover:bg-zinc-900/70 hover:border-white/15">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-medium text-zinc-400 flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
                   <Sparkles className="h-3 w-3 text-emerald-400" />
                   {agentName}
                 </span>
                 {lastAssistantMessage.latency && (
                   <span
-                    className="inline-flex items-center gap-1 font-mono text-[10px] text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded-full"
+                    className="inline-flex items-center gap-1 font-mono text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-2 py-0.5 rounded-full shadow-inner"
                     title={`STT: ${lastAssistantMessage.latency.sttMs ?? '?'}ms · LLM: ${lastAssistantMessage.latency.llmMs ?? '?'}ms · TTS: ${lastAssistantMessage.latency.ttsMs ?? '?'}ms`}
                   >
                     <Zap className="h-2.5 w-2.5" />
@@ -535,7 +557,7 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
               </p>
             </div>
           ) : (
-            <p className="text-center text-xs text-zinc-500">
+            <p className="text-center text-xs text-zinc-500 font-mono tracking-tight">
               Say something to {agentName} or tap the microphone below
             </p>
           )}
@@ -626,23 +648,23 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
           )}
 
           {/* Main Floating Capsule Pill */}
-          <div className="flex items-center justify-between gap-5 rounded-full border border-white/10 bg-zinc-950/80 px-5 py-2.5 shadow-[0_15px_35px_rgba(0,0,0,0.7)] backdrop-blur-2xl">
+          <div className="flex items-center justify-between gap-6 rounded-full border border-white/[0.12] bg-zinc-950/85 px-6 py-2.5 shadow-[0_25px_60px_-10px_rgba(0,0,0,0.9)] backdrop-blur-2xl ring-1 ring-white/[0.05]">
             {/* Left: Waveform / Equalizer Visualizer */}
-            <div className="flex items-center gap-1 h-6 w-10 justify-center">
+            <div className="flex items-center gap-1.5 h-6 w-11 justify-center">
               {[0, 1, 2, 3, 4].map((i) => {
                 const waveHeight =
                   callState === 'user_speaking'
-                    ? Math.max(4, Math.sin(i * 0.8 + audioLevel / 8) * 16 + audioLevel * 0.2)
+                    ? Math.max(5, Math.sin(i * 0.8 + audioLevel / 8) * 16 + audioLevel * 0.25)
                     : callState === 'speaking'
-                      ? Math.max(4, Math.sin(i * 1.2 + Date.now() / 150) * 12 + 6)
-                      : 4;
+                      ? Math.max(5, Math.sin(i * 1.2 + Date.now() / 150) * 13 + 6)
+                      : 5;
                 return (
                   <span
                     key={i}
-                    className={`w-[2.5px] rounded-full transition-all duration-75 ${
-                      isEmerald ? 'bg-emerald-400' : 'bg-purple-400'
+                    className={`w-[3px] rounded-full transition-all duration-75 ${
+                      isEmerald ? 'bg-emerald-400 shadow-[0_0_6px_#34d399]' : 'bg-purple-400 shadow-[0_0_6px_#c084fc]'
                     }`}
-                    style={{ height: `${Math.min(waveHeight, 20)}px` }}
+                    style={{ height: `${Math.min(waveHeight, 22)}px` }}
                   />
                 );
               })}
@@ -653,22 +675,22 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
               {/* Outer pulsing ring when speaking */}
               {(callState === 'user_speaking' || callState === 'speaking') && (
                 <span
-                  className={`absolute -inset-2.5 rounded-full animate-ping opacity-35 ${
-                    isEmerald ? 'bg-emerald-500' : 'bg-purple-500'
+                  className={`absolute -inset-2 rounded-full animate-ping opacity-30 ${
+                    isEmerald ? 'bg-emerald-400' : 'bg-purple-400'
                   }`}
                 />
               )}
               <button
                 type="button"
                 onClick={toggleRecording}
-                className={`relative flex h-14 w-14 items-center justify-center rounded-full transition-all duration-300 shadow-2xl active:scale-95 ${
+                className={`relative flex h-14 w-14 items-center justify-center rounded-full transition-all duration-300 shadow-2xl active:scale-95 group ${
                   callState === 'user_speaking'
                     ? isEmerald
-                      ? 'bg-emerald-500 text-black shadow-[0_0_30px_rgba(16,185,129,0.7)] ring-4 ring-emerald-400/30'
-                      : 'bg-purple-500 text-white shadow-[0_0_30px_rgba(168,85,247,0.7)] ring-4 ring-purple-400/30'
+                      ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 text-black shadow-[0_0_35px_rgba(16,185,129,0.7)] ring-4 ring-emerald-400/30'
+                      : 'bg-gradient-to-tr from-purple-600 to-indigo-500 text-white shadow-[0_0_35px_rgba(168,85,247,0.7)] ring-4 ring-purple-400/30'
                     : callState === 'speaking'
-                      ? 'bg-rose-600 text-white shadow-[0_0_25px_rgba(225,29,72,0.7)]'
-                      : 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)]'
+                      ? 'bg-gradient-to-tr from-rose-600 to-red-500 text-white shadow-[0_0_30px_rgba(225,29,72,0.7)] ring-4 ring-rose-500/30'
+                      : 'bg-gradient-to-b from-zinc-800 to-zinc-900 border border-white/10 text-zinc-100 hover:from-zinc-700 hover:to-zinc-800 hover:shadow-[0_0_25px_rgba(255,255,255,0.12)]'
                 }`}
                 title={
                   callState === 'speaking'
@@ -681,7 +703,7 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
                 {callState === 'speaking' ? (
                   <Square className="h-5 w-5 fill-current" />
                 ) : (
-                  <Mic className="h-6 w-6" />
+                  <Mic className="h-6 w-6 group-hover:scale-105 transition-transform" />
                 )}
               </button>
             </div>
@@ -691,10 +713,10 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
               <button
                 type="button"
                 onClick={() => setShowTextInput(!showTextInput)}
-                className={`flex h-9 w-9 items-center justify-center rounded-full border border-white/10 transition ${
+                className={`flex h-9 w-9 items-center justify-center rounded-full border transition active:scale-95 ${
                   showTextInput
-                    ? 'bg-white text-black'
-                    : 'bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                    ? 'bg-white text-black border-white shadow-md'
+                    : 'border-white/10 bg-zinc-900/90 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
                 }`}
                 title="Type text message"
               >
@@ -704,12 +726,12 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
               <button
                 type="button"
                 onClick={() => switchVadMode(vadMode === 'auto' ? 'manual' : 'auto')}
-                className={`rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide border transition ${
+                className={`rounded-full px-3 py-1 text-[10px] font-bold tracking-wider border transition-all active:scale-95 ${
                   vadMode === 'auto'
                     ? isEmerald
-                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
-                      : 'border-purple-500/40 bg-purple-500/10 text-purple-400'
-                    : 'border-white/10 bg-zinc-900 text-zinc-400'
+                      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                      : 'border-purple-500/40 bg-purple-500/10 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.15)]'
+                    : 'border-white/10 bg-zinc-900/90 text-zinc-400 hover:text-zinc-200'
                 }`}
                 title="Toggle Auto VAD vs Tap to Talk"
               >

@@ -20,6 +20,7 @@ import {
   LayoutDashboard,
   FileText,
   Plus,
+  Mic,
 } from 'lucide-react';
 import {
   TtsGender,
@@ -350,21 +351,21 @@ function PlaygroundContent() {
             >
               <PanelLeft className="h-5 w-5" />
             </button>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-zinc-100">
+            <div className="flex items-center gap-2.5">
+              <span className="text-sm font-semibold tracking-tight text-zinc-100">
                 {activeConversation?.title || 'Axiomra Voice'}
               </span>
               {selectedAgent && (
-                <div className="hidden items-center gap-1.5 sm:inline-flex">
-                  <span className="items-center gap-1 rounded-full border border-zinc-700 px-2 py-0.5 text-[11px] text-zinc-400 inline-flex">
-                    <Bot className="h-3 w-3" />
+                <div className="hidden items-center gap-2 sm:inline-flex">
+                  <span className="items-center gap-1.5 rounded-full border border-white/10 bg-zinc-900/80 px-2.5 py-0.5 text-[11px] font-medium text-zinc-200 inline-flex shadow-sm">
+                    <Bot className="h-3 w-3 text-emerald-400" />
                     {selectedAgent.name}
                   </span>
-                  <span className="rounded-full bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-[10px] text-amber-300 font-medium">
-                    Start: &quot;{selectedAgent.startPhrase || 'hey boss'}&quot;
+                  <span className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 text-[10px] text-amber-300 font-medium tracking-tight shadow-sm">
+                    Wake: &quot;{selectedAgent.startPhrase || 'hey boss'}&quot;
                   </span>
-                  <span className="rounded-full bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 text-[10px] text-rose-300 font-medium">
-                    End: &quot;{selectedAgent.endPhrase || 'goodbye'}&quot;
+                  <span className="rounded-full bg-rose-500/10 border border-rose-500/30 px-2.5 py-0.5 text-[10px] text-rose-300 font-medium tracking-tight shadow-sm">
+                    Stop: &quot;{selectedAgent.endPhrase || 'goodbye'}&quot;
                   </span>
                 </div>
               )}
@@ -374,7 +375,7 @@ function PlaygroundContent() {
             <button
               type="button"
               onClick={closeChat}
-              className="rounded-lg px-3 py-1.5 text-xs text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
+              className="rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-500/30 shadow-sm"
             >
               Close chat
             </button>
@@ -383,9 +384,9 @@ function PlaygroundContent() {
 
         {activeConversation?.contextPrompt?.trim() && (
           <div className="mx-auto w-full max-w-3xl px-4 pb-2">
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 px-4 py-2.5">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-500">Context</p>
-              <p className="mt-0.5 line-clamp-2 text-xs text-zinc-300">{activeConversation.contextPrompt}</p>
+            <div className="rounded-2xl border border-white/10 bg-zinc-900/60 backdrop-blur-md px-4 py-2.5 shadow-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">Context</p>
+              <p className="mt-0.5 line-clamp-2 text-xs text-zinc-300 leading-relaxed">{activeConversation.contextPrompt}</p>
             </div>
           </div>
         )}
@@ -402,8 +403,8 @@ function PlaygroundContent() {
             />
           ) : agents.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center px-4 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 text-zinc-300 shadow-xl mb-4">
-                <Bot className="h-8 w-8 text-zinc-200" />
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-zinc-900 text-zinc-300 shadow-2xl mb-4 ring-1 ring-white/5">
+                <Bot className="h-8 w-8 text-emerald-400" />
               </div>
               <h1 className="text-2xl font-bold tracking-tight text-white md:text-3xl">
                 No Voice Agents Available
@@ -414,30 +415,32 @@ function PlaygroundContent() {
               <button
                 type="button"
                 onClick={openCreateAgentModal}
-                className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 shadow-lg"
+                className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 shadow-xl active:scale-95"
               >
                 <Plus className="h-4 w-4" />
                 Create New Agent
               </button>
             </div>
           ) : (
-            <div className="flex h-full flex-col items-center justify-center px-4">
-              <h1 className="text-center text-3xl font-semibold tracking-tight text-white md:text-4xl">
+            <div className="relative flex h-full flex-col items-center justify-center px-4">
+              <div className="pointer-events-none absolute h-72 w-72 rounded-full bg-emerald-500/10 blur-[120px]" />
+              <h1 className="text-center text-3xl font-light tracking-tight text-white md:text-4xl">
                 What can I help with?
               </h1>
-              <p className="mt-3 max-w-md text-center text-sm text-zinc-500">
-                Start a new chat with a name and context, or open one from Recents.
+              <p className="mt-3 max-w-md text-center text-sm text-zinc-400 leading-relaxed">
+                Start a voice session with <span className="text-zinc-200 font-medium">{selectedAgent?.name || 'your agent'}</span> or open an existing conversation from Recents.
               </p>
               <button
                 type="button"
                 onClick={openNewChatModal}
                 disabled={!selectedAgentId}
-                className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-zinc-200 disabled:opacity-40"
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-40 shadow-xl active:scale-95"
               >
-                <SquarePen className="h-4 w-4" />
-                New chat
+                <Mic className="h-4 w-4 text-emerald-600" />
+                Start Voice Chat
               </button>
-              <div className="mt-10 w-full max-w-2xl rounded-[28px] border border-zinc-800 bg-zinc-900/80 px-4 py-3 text-center text-sm text-zinc-500">
+              <div className="mt-8 flex items-center gap-2 rounded-full border border-white/5 bg-zinc-900/40 px-4 py-1.5 text-xs text-zinc-500 backdrop-blur-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 Voice turns on automatically when a chat is open
               </div>
             </div>
