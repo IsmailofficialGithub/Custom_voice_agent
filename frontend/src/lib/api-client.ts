@@ -11,6 +11,9 @@ export interface Agent {
   llmModel: string;
   ttsVoice?: string;
   ttsGender?: string;
+  startPhrase?: string;
+  endPhrase?: string;
+  farewellMessage?: string;
   createdAt: string;
   updatedAt: string;
 }
