@@ -398,6 +398,7 @@ function PlaygroundContent() {
               apiKey={apiKey}
               agentName={selectedAgent?.name || 'Assistant'}
               onError={(err) => showError(err, 'Voice')}
+              onClose={closeChat}
             />
           ) : agents.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center px-4 text-center">

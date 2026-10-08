@@ -320,24 +320,6 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
           break;
 
         case 'text_message':
-          if (session.realtimeWs) {
-            session.realtimeTurnStart = Date.now();
-            session.realtimeAudioSeen = false;
-            session.realtimeTranscript = '';
-            session.realtimeResponseActive = true;
-            this.send(client, { type: 'status', status: 'thinking' });
-            this.sendRealtimeEvent(session, {
-              type: 'conversation.item.create',
-              item: {
-                type: 'message',
-                role: 'user',
-                content: [{ type: 'input_text', text: msg.text ?? '' }],
-              },
-            });
-            this.sendRealtimeEvent(session, { type: 'response.create' });
-            return;
-          }
-
           try {
             await this.handleTextMessage(client, session, msg.text ?? '');
           } catch (err) {
@@ -704,6 +686,24 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     }
 
+    if (session.isRealtime && session.realtimeWs && session.realtimeWs.readyState === WebSocket.OPEN) {
+      session.realtimeTurnStart = Date.now();
+      session.realtimeAudioSeen = false;
+      session.realtimeTranscript = '';
+      session.realtimeResponseActive = true;
+      this.send(client, { type: 'status', status: 'thinking' });
+      this.sendRealtimeEvent(session, {
+        type: 'conversation.item.create',
+        item: {
+          type: 'message',
+          role: 'user',
+          content: [{ type: 'input_text', text }],
+        },
+      });
+      this.sendRealtimeEvent(session, { type: 'response.create' });
+      return;
+    }
+
     this.send(client, { type: 'status', status: 'thinking' });
 
     let cumulativeText = '';
@@ -920,6 +920,9 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       case 'response.output_audio.delta':
       case 'response.audio.delta':
+        if (session.lifecycleState === 'ending') {
+          return;
+        }
         if (event.delta) {
           session.realtimeResponseActive = true;
           if (!session.realtimeAudioSeen) {
@@ -942,6 +945,9 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       case 'response.output_audio_transcript.delta':
       case 'response.audio_transcript.delta':
+        if (session.lifecycleState === 'ending') {
+          return;
+        }
         if (event.delta) {
           session.realtimeTranscript = (session.realtimeTranscript || '') + event.delta;
           this.send(client, { type: 'response_text_chunk', text: session.realtimeTranscript });
@@ -950,6 +956,9 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       case 'response.output_audio_transcript.done':
       case 'response.audio_transcript.done':
+        if (session.lifecycleState === 'ending') {
+          return;
+        }
         if (event.transcript) {
           session.realtimeTranscript = event.transcript;
           this.send(client, { type: 'response_text_chunk', text: event.transcript });
@@ -962,10 +971,84 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.logger.log(`[Realtime STT] User transcript: "${trimmed}"`);
           this.send(client, { type: 'final_transcript', text: trimmed });
           this.conversations.addMessage(session.conversationId, 'user', trimmed).catch(() => {});
+
+          if (session.lifecycleState === 'active') {
+            const endMatch = isEndPhraseMatch(trimmed, session.endPhrase || 'goodbye');
+            if (endMatch) {
+              this.logger.log(
+                `[Realtime Active] End phrase "${session.endPhrase}" matched for transcript "${trimmed}". Ending session.`,
+              );
+              session.lifecycleState = 'ending';
+              if (session.realtimeWs && session.realtimeWs.readyState === WebSocket.OPEN) {
+                try {
+                  session.realtimeWs.send(JSON.stringify({ type: 'response.cancel' }));
+                } catch {
+                  // ignore
+                }
+              }
+              this.send(client, {
+                type: 'lifecycle_change',
+                state: 'ending',
+              });
+
+              const farewell = session.farewellMessage || 'Goodbye! Talk to you soon.';
+              this.conversations
+                .resolveTtsVoice(session.conversationId)
+                .then(async (voice) => {
+                  const abortController = new AbortController();
+                  session.abortController = abortController;
+                  await this.speakDirectMessage(client, session, farewell, voice, abortController);
+                  this.send(client, {
+                    type: 'session_ended',
+                    reason: 'end_phrase_triggered',
+                  });
+                  this.conversations.addMessage(session.conversationId, 'assistant', farewell).catch(() => {});
+                  this.conversations.end(session.conversationId).catch(() => {});
+                })
+                .catch((err) => {
+                  this.logger.error(`Failed to handle realtime end farewell: ${err}`);
+                  this.send(client, {
+                    type: 'session_ended',
+                    reason: 'end_phrase_triggered',
+                  });
+                  this.conversations.end(session.conversationId).catch(() => {});
+                });
+              return;
+            }
+          } else if (session.lifecycleState === 'standby') {
+            const wakeMatch = isWakePhraseMatch(trimmed, session.startPhrase || 'hey boss');
+            if (!wakeMatch.matched) {
+              this.logger.log(
+                `[Realtime Standby] Transcript "${trimmed}" does not match wake phrase "${session.startPhrase}". Cancelling response.`,
+              );
+              if (session.realtimeWs && session.realtimeWs.readyState === WebSocket.OPEN) {
+                try {
+                  session.realtimeWs.send(JSON.stringify({ type: 'response.cancel' }));
+                } catch {
+                  // ignore
+                }
+              }
+              this.send(client, { type: 'status', status: 'standby' });
+              this.send(client, { type: 'end_of_response' });
+              return;
+            }
+
+            this.logger.log(`[Realtime Standby] Wake phrase "${session.startPhrase}" matched! Transitioning to active.`);
+            session.lifecycleState = 'active';
+            this.send(client, {
+              type: 'lifecycle_change',
+              state: 'active',
+              startPhrase: session.startPhrase,
+              endPhrase: session.endPhrase,
+            });
+          }
         }
         break;
 
       case 'response.done':
+        if (session.lifecycleState === 'ending') {
+          return;
+        }
         session.realtimeAudioSeen = false;
         session.realtimeResponseActive = false;
         if (session.realtimeTranscript) {
@@ -973,7 +1056,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
         session.realtimeTranscript = '';
         this.send(client, { type: 'end_of_response' });
-        this.send(client, { type: 'status', status: 'idle' });
+        this.send(client, { type: 'status', status: session.lifecycleState === 'standby' ? 'standby' : 'idle' });
         break;
 
       case 'error':

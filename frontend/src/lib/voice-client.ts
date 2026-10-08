@@ -283,10 +283,13 @@ export class VoiceSessionClient {
         break;
       case 'session_ended':
         this.updateState('disconnected');
+        this.isCapturing = false;
+        this.endCapture();
         this.handlers.onSessionEnded?.(msg.reason || 'end_phrase_triggered');
+        const disconnectDelay = this.isPlayingQueue || this.audioQueue.length > 0 ? 2500 : 400;
         setTimeout(() => {
           this.disconnect();
-        }, 300);
+        }, disconnectDelay);
         break;
       case 'partial_transcript':
         if (this.isStaleResponse()) return;

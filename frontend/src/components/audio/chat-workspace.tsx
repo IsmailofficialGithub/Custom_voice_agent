@@ -187,7 +187,7 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
               setCallState('disconnected');
               setTimeout(() => {
                 onClose?.();
-              }, 1500);
+              }, 2500);
             },
             onLatencyMetrics: (metrics) => {
               const latency: LatencyInfo = {

@@ -54,7 +54,13 @@ describe('phrase-matcher', () => {
     it('matches exact end phrase standalone', () => {
       expect(isEndPhraseMatch('Goodbye', 'goodbye')).toBe(true);
       expect(isEndPhraseMatch('goodbye!', 'goodbye')).toBe(true);
+      expect(isEndPhraseMatch('Good bye', 'goodbye')).toBe(true);
+      expect(isEndPhraseMatch('Bye', 'goodbye')).toBe(true);
+      expect(isEndPhraseMatch('bye bye', 'goodbye')).toBe(true);
       expect(isEndPhraseMatch('stop', 'stop')).toBe(true);
+      expect(isEndPhraseMatch('end chat', 'goodbye')).toBe(true);
+      expect(isEndPhraseMatch('end conference', 'goodbye')).toBe(true);
+      expect(isEndPhraseMatch('close chat', 'goodbye')).toBe(true);
     });
 
     it('matches end phrase within sentence', () => {

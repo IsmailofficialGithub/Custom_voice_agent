@@ -31,16 +31,27 @@ export function isWakePhraseMatch(
     return { matched: true, remainder: transcript.trim() };
   }
 
-  // Match wake phrase with word boundaries in normalized text
-  const wakeRegex = new RegExp(`(^|\\s)${escapeRegex(normWake)}(\\s|$)`);
-  const match = normTranscript.match(wakeRegex);
+  // Build variants (e.g. "hey boss", "hi boss", "hello boss")
+  const wakeVariants = [normWake];
+  if (normWake === 'hey boss') {
+    wakeVariants.push('hi boss', 'hello boss');
+  }
 
-  if (!match) {
+  let matchedVariant: string | null = null;
+  for (const variant of wakeVariants) {
+    const wakeRegex = new RegExp(`(^|\\s)${escapeRegex(variant)}(\\s|$)`);
+    if (wakeRegex.test(normTranscript)) {
+      matchedVariant = variant;
+      break;
+    }
+  }
+
+  if (!matchedVariant) {
     return { matched: false, remainder: '' };
   }
 
   // Extract remainder from original transcript after the wake phrase
-  const wakeWords = normWake.split(' ');
+  const wakeWords = matchedVariant.split(' ');
   const regexPattern = wakeWords.map((w) => escapeRegex(w)).join('[\\s,\\.!?;:-]+');
   const originalRegex = new RegExp(regexPattern, 'i');
   const origMatch = transcript.match(originalRegex);
@@ -56,15 +67,34 @@ export function isWakePhraseMatch(
 
 /**
  * Checks if a speech transcript contains the agent's end phrase.
+ * Supports exact end phrase, "goodbye" vs "good bye" vs "bye",
+ * and universal session termination keywords.
  */
 export function isEndPhraseMatch(transcript: string, endPhrase: string): boolean {
   const normTranscript = normalizePhrase(transcript);
   const normEnd = normalizePhrase(endPhrase);
 
-  if (!normEnd) {
+  if (!normTranscript) {
     return false;
   }
 
-  const endRegex = new RegExp(`(^|\\s)${escapeRegex(normEnd)}(\\s|$)`);
-  return endRegex.test(normTranscript);
+  // 1. Direct configured phrase match
+  if (normEnd) {
+    const endRegex = new RegExp(`(^|\\s)${escapeRegex(normEnd)}(\\s|$)`);
+    if (endRegex.test(normTranscript)) {
+      return true;
+    }
+
+    // Handle "goodbye" vs "good bye" vs "bye"
+    if (normEnd === 'goodbye' || normEnd === 'good bye' || normEnd === 'bye') {
+      if (/(^|\s)(goodbye|good\s+bye|bye|bye\s+bye)(\s|$)/.test(normTranscript)) {
+        return true;
+      }
+    }
+  }
+
+  // 2. Universal termination commands
+  const universalRegex =
+    /(^|\s)(goodbye|good\s+bye|bye\s+bye|bye|stop\s+listening|end\s+call|end\s+chat|end\s+conversation|end\s+conference|close\s+chat|exit|quit|stop)(\s|$)/;
+  return universalRegex.test(normTranscript);
 }
