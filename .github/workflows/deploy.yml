@@ -57,7 +57,7 @@ jobs:
           ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
           STT_PROVIDER=openai
           STT_MODEL=whisper-1
-          STT_LANGUAGE=en
+          STT_LANGUAGE=auto
           TTS_PROVIDER=openai
           SEARCH_PROVIDER=brave
           BRAVE_SEARCH_API_KEY=${{ secrets.BRAVE_SEARCH_API_KEY }}

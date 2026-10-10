@@ -851,18 +851,38 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.logger.warn(`Could not resolve agent context for Realtime session: ${e}`);
         }
 
+        const multilingualDirective = `\n\nCORE VOICE & MULTILINGUAL RULES:
+- Default language is English.
+- Dynamically detect the user's language, dialect, and script on EVERY turn independently.
+- If the user speaks Punjabi (e.g. 'ki haal hai', 'kiven ho', 'tussi kiven ho'), respond naturally in Punjabi.
+- If the user speaks Saraiki (e.g. 'kiya haal he', 'theek thaak ho', 'tusan kiye o'), respond naturally in Saraiki.
+- If the user speaks Urdu or Roman Urdu (e.g. 'aap kaise hain', 'kya kar rahe ho'), respond in Urdu or Roman Urdu.
+- If the user speaks English, respond in English.
+- If the user shifts languages mid-conversation (e.g. starts in English, switches to Punjabi, then shifts to Saraiki), IMMEDIATELY shift and respond in that exact new language on that turn.
+- Match script: if spoken or written in Roman/Latin characters, respond in Roman script. If native script, respond in native script.
+- Keep responses short: 1-2 concise spoken sentences.`;
+        instructions += multilingualDirective;
+
         // Configure session using OpenAI Realtime GA schema
         const sessionUpdate = {
           type: 'session.update',
           session: {
+            type: 'realtime',
             instructions,
-            voice,
-            input_audio_format: 'pcm16',
-            output_audio_format: 'pcm16',
-            input_audio_transcription: {
-              model: 'whisper-1',
+            audio: {
+              input: {
+                format: { type: 'audio/pcm', rate: 24000 },
+                turn_detection: null,
+                transcription: {
+                  model: 'whisper-1',
+                  prompt: 'Conversational dialogue verbatim in English, Punjabi, Saraiki, Urdu, and Roman Urdu.',
+                },
+              },
+              output: {
+                format: { type: 'audio/pcm', rate: 24000 },
+                voice,
+              },
             },
-            turn_detection: null,
           },
         };
         rtWs.send(JSON.stringify(sessionUpdate));

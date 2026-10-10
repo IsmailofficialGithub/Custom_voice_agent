@@ -53,9 +53,9 @@ export class SttService {
         file,
         model: configuredModel,
         temperature: 0,
-        prompt: 'Hey boss, hello, goodbye, good bye, bye, thank you. Main tumhari aawaz sunna chahta hoon. Transcribe spoken English, Roman Urdu, Urdu, or Hindi verbatim.',
+        prompt: 'Hey boss, hello, goodbye, bye, thank you. Main theek hoon, tussi kiven ho, ki haal hai, kiya haal he. Transcribe English, Punjabi, Saraiki, Urdu, and Roman Urdu verbatim without translating.',
       };
-      if (configuredLang && configuredLang !== 'auto') {
+      if (configuredLang && configuredLang !== 'auto' && configuredLang !== 'multilingual') {
         sttOptions.language = configuredLang;
       }
 

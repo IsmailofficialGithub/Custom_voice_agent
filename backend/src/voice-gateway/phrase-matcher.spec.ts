@@ -74,6 +74,10 @@ describe('phrase-matcher', () => {
       expect(isEndPhraseMatch('Cool boy!', 'goodbye')).toBe(true);
       expect(isEndPhraseMatch('good buy', 'goodbye')).toBe(true);
       expect(isEndPhraseMatch('cut the call', 'goodbye')).toBe(true);
+      expect(isEndPhraseMatch('Allah hafiz', 'goodbye')).toBe(true);
+      expect(isEndPhraseMatch('Khuda hafiz', 'goodbye')).toBe(true);
+      expect(isEndPhraseMatch('alvida', 'goodbye')).toBe(true);
+      expect(isEndPhraseMatch('rab rakha', 'goodbye')).toBe(true);
     });
 
     it('does not match substring within a different word (e.g. "stopping")', () => {

@@ -124,7 +124,7 @@ export function isEndPhraseMatch(transcript: string, endPhrase: string): boolean
 
   // 3. Universal termination commands
   const universalRegex =
-    /(^|\s)(goodbye|good\s+bye|bye\s+bye|bye|cut\s+the\s+call|cut\s+call|hang\s+up|disconnect|stop\s+listening|end\s+call|end\s+chat|end\s+conversation|end\s+conference|close\s+chat|exit|quit|stop)(\s|$)/;
+    /(^|\s)(goodbye|good\s+bye|bye\s+bye|bye|cut\s+the\s+call|cut\s+call|hang\s+up|disconnect|stop\s+listening|end\s+call|end\s+chat|end\s+conversation|end\s+conference|close\s+chat|exit|quit|stop|allah\s*hafiz|khuda\s*hafiz|alvida|rab\s*rakha)(\s|$)/;
   if (universalRegex.test(normTranscript)) {
     return true;
   }
