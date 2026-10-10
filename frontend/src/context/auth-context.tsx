@@ -35,26 +35,29 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const SESSION_KEY = 'axiomra_session';
-const DEFAULT_KEY = process.env.NEXT_PUBLIC_DEFAULT_API_KEY || 'dev-secret-key-change-me';
+const DEFAULT_KEY = (process.env.NEXT_PUBLIC_DEFAULT_API_KEY || '').trim();
+
+const GUEST_USER: UserProfile = {
+  id: 'guest',
+  name: 'User',
+  email: '',
+  role: 'operator',
+  avatar: '',
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [apiKey, setApiKeyState] = useState<string>('');
   const [ready, setReady] = useState(false);
-  const [currentUser, setCurrentUser] = useState<UserProfile>(authConfig.demoUsers[0] as UserProfile);
+  const [currentUser, setCurrentUser] = useState<UserProfile>(GUEST_USER);
 
   useEffect(() => {
-    const savedKey = localStorage.getItem(SESSION_KEY);
-    let activeKey = savedKey || '';
-    if (DEFAULT_KEY && DEFAULT_KEY !== 'dev-secret-key-change-me' && activeKey === 'dev-secret-key-change-me') {
-      activeKey = DEFAULT_KEY;
-    } else if (!activeKey) {
+    const savedKey = localStorage.getItem(SESSION_KEY) || '';
+    let activeKey = savedKey;
+    if (!activeKey && DEFAULT_KEY && DEFAULT_KEY !== 'dev-secret-key-change-me') {
       activeKey = DEFAULT_KEY;
     }
     if (activeKey) {
       setApiKeyState(activeKey);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(SESSION_KEY, activeKey);
-      }
     }
     const saved = localStorage.getItem('axiomra_user');
     if (saved) {
@@ -120,8 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setApiKey('');
-    const defaultUser = authConfig.demoUsers[0] as UserProfile;
-    setCurrentUser(defaultUser);
+    setCurrentUser(GUEST_USER);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('axiomra_user');
       localStorage.removeItem(SESSION_KEY);

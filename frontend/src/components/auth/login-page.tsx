@@ -4,16 +4,16 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/auth-context';
 import companyConfig from '../../config/company.json';
-import { Key, Mail, Lock, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
+import { Key, Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export function LoginPage() {
   const router = useRouter();
   const { login, loginWithApiKey, apiKey, currentUser, logout } = useAuth();
 
   const [authMethod, setAuthMethod] = useState<'password' | 'apikey'>('password');
-  const [email, setEmail] = useState('admin@axiomra.ai');
-  const [password, setPassword] = useState('password123');
-  const [devKey, setDevKey] = useState('dev-secret-key-change-me');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [devKey, setDevKey] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -125,7 +125,7 @@ export function LoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="admin@axiomra.ai"
+                    placeholder="name@company.com"
                     className="ui-input pr-8"
                   />
                   <Mail className="absolute right-2.5 top-2.5 h-4 w-4 text-[var(--text-faint)] pointer-events-none" />
@@ -161,20 +161,6 @@ export function LoginPage() {
                 <span>{busy ? 'Authenticating…' : 'Sign In'}</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
-
-              <div className="pt-2 border-t border-[var(--border)] text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('admin@axiomra.ai');
-                    setPassword('password123');
-                  }}
-                  className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] hover:text-[var(--text)]"
-                >
-                  <Sparkles className="h-3 w-3 text-[var(--warn)]" />
-                  <span>Fill default credentials (admin@axiomra.ai / password123)</span>
-                </button>
-              </div>
             </form>
           )}
 
@@ -192,7 +178,7 @@ export function LoginPage() {
                     required
                     value={devKey}
                     onChange={(e) => setDevKey(e.target.value)}
-                    placeholder="dev-secret-key-change-me"
+                    placeholder="Enter your API key"
                     className="ui-input font-mono pr-8"
                   />
                   <Key className="absolute right-2.5 top-2.5 h-4 w-4 text-[var(--text-faint)] pointer-events-none" />
@@ -212,17 +198,6 @@ export function LoginPage() {
                 <span>Continue with API Key</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
-
-              <div className="pt-2 border-t border-[var(--border)] text-center">
-                <button
-                  type="button"
-                  onClick={() => setDevKey('dev-secret-key-change-me')}
-                  className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] hover:text-[var(--text)]"
-                >
-                  <Sparkles className="h-3 w-3 text-[var(--warn)]" />
-                  <span>Fill default developer key (dev-secret-key-change-me)</span>
-                </button>
-              </div>
             </form>
           )}
         </div>

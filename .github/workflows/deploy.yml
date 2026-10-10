@@ -43,10 +43,10 @@ jobs:
           VOICE_RATE_LIMIT_WINDOW_SEC=60
 
           # App & Authentication
-          API_KEY=${{ secrets.API_KEY || 'dev-secret-key-change-me' }}
-          AUTH_EMAIL=${{ secrets.AUTH_EMAIL || 'admin@axiomra.ai' }}
-          AUTH_PASSWORD=${{ secrets.AUTH_PASSWORD || 'password123' }}
-          AUTH_JWT_SECRET=${{ secrets.AUTH_JWT_SECRET || secrets.API_KEY || 'dev-secret-key-change-me' }}
+          API_KEY=${{ secrets.API_KEY }}
+          AUTH_EMAIL=${{ secrets.AUTH_EMAIL }}
+          AUTH_PASSWORD=${{ secrets.AUTH_PASSWORD }}
+          AUTH_JWT_SECRET=${{ secrets.AUTH_JWT_SECRET || secrets.API_KEY }}
           PORT=3000
           BACKEND_PORT=3011
           FRONTEND_PORT=3010
@@ -76,7 +76,7 @@ jobs:
           # Frontend
           NEXT_PUBLIC_API_URL=https://vagent.axiomra.co/api/v1
           NEXT_PUBLIC_WS_URL=wss://vagent.axiomra.co/api/v1/voice
-          NEXT_PUBLIC_DEFAULT_API_KEY=${{ secrets.API_KEY || 'dev-secret-key-change-me' }}
+          NEXT_PUBLIC_DEFAULT_API_KEY=${{ secrets.API_KEY }}
           ENVEOF"
           ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sed -i 's/^[[:space:]]*//' ${{ secrets.DEPLOY_PATH }}/.env"
 

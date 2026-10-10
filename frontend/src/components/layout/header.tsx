@@ -163,7 +163,7 @@ export function Header() {
               value={tempApiKey}
               onChange={(e) => setTempApiKey(e.target.value)}
               className="ui-input font-mono"
-              placeholder="dev-secret-key-change-me"
+              placeholder="Enter your API key"
             />
             <div className="mt-4 flex justify-end gap-2">
               <button type="button" onClick={() => setShowKeyModal(false)} className="ui-btn ui-btn-ghost">

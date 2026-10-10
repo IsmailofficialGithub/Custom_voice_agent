@@ -19,11 +19,11 @@ export class AuthService {
   }
 
   jwtSecret(): string {
-    return (this.config.get<string>('AUTH_JWT_SECRET') || this.config.get<string>('API_KEY') || 'change-me').trim();
+    return (this.config.get<string>('AUTH_JWT_SECRET') || this.config.get<string>('API_KEY') || '').trim();
   }
 
   apiKey(): string {
-    return (this.config.get<string>('API_KEY') || 'dev-secret-key-change-me').trim().replace(/^["']|["']$/g, '');
+    return (this.config.get<string>('API_KEY') ?? '').trim().replace(/^["']|["']$/g, '');
   }
 
   login(email: string, password: string): { token: string; email: string } {
@@ -55,7 +55,8 @@ export class AuthService {
   isValidBearer(token: string): boolean {
     const t = (token ?? '').trim();
     if (!t) return false;
-    if (t === this.apiKey()) return true;
+    const key = this.apiKey();
+    if (key && t === key) return true;
     return this.isSessionToken(t);
   }
 
