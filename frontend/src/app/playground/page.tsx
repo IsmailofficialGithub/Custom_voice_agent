@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/auth-context';
@@ -21,6 +21,7 @@ import {
   FileText,
   Plus,
   Mic,
+  Phone,
   PhoneOff,
   FileSpreadsheet,
   Users,
@@ -341,6 +342,48 @@ function PlaygroundContent() {
 
   const selectedAgent = agents.find((a) => a.id === selectedAgentId);
 
+  const autoStartedRef = useRef(false);
+  const startCallParam = searchParams.get('startCall') === 'true' || searchParams.get('autoStart') === 'true';
+
+  const startCallDirectly = async (targetAgentId?: string) => {
+    const aid = targetAgentId || selectedAgentId;
+    if (!aid) {
+      showError('Select an agent first.', 'Start Call');
+      return;
+    }
+    const agent = agents.find((a) => a.id === aid);
+    const agentVoice = (agent?.ttsVoice as TtsVoiceId) || 'alloy';
+    const agentGender = (agent?.ttsGender as TtsGender) || genderForVoice(agentVoice);
+    const title = `${agent?.name || 'Agent'} Call · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+    try {
+      setCreating(true);
+      const chat = await apiClient.createConversation(
+        aid,
+        {
+          title,
+          ttsVoice: agentVoice,
+          ttsGender: agentGender,
+        },
+        apiKey,
+      );
+      setConversations((prev) => [chat, ...prev]);
+      setActiveConversation(chat);
+      showSuccess('Call started', `Live call started with ${agent?.name || 'Agent'}`);
+    } catch (err) {
+      showError(err, 'Start Call');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  useEffect(() => {
+    if (startCallParam && selectedAgentId && agents.length > 0 && !autoStartedRef.current && !activeConversation) {
+      autoStartedRef.current = true;
+      startCallDirectly(selectedAgentId);
+    }
+  }, [startCallParam, selectedAgentId, agents]);
+
   const openNewChatModal = () => {
     if (!selectedAgentId) {
       showError('Select an agent first.', 'New Chat');
@@ -441,11 +484,20 @@ function PlaygroundContent() {
         <div className="flex items-center gap-2 p-3">
           <button
             type="button"
-            onClick={openNewChatModal}
-            className="flex flex-1 items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-zinc-100 transition hover:bg-zinc-800"
+            onClick={() => startCallDirectly()}
+            disabled={creating || !selectedAgentId}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-3.5 py-2.5 text-xs font-bold text-white transition active:scale-95 shadow-md shadow-emerald-950/50 disabled:opacity-40"
           >
-            <SquarePen className="h-4 w-4" />
-            New chat
+            <Phone className="h-3.5 w-3.5 fill-current" />
+            <span>{creating ? 'Starting…' : 'Start Call'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={openNewChatModal}
+            className="rounded-xl border border-white/10 bg-zinc-800/80 p-2.5 text-zinc-300 hover:bg-zinc-700 hover:text-white transition"
+            title="Custom chat settings"
+          >
+            <SquarePen className="h-3.5 w-3.5" />
           </button>
         </div>
 
@@ -656,24 +708,28 @@ function PlaygroundContent() {
           ) : (
             <div className="relative flex h-full flex-col items-center justify-center px-4">
               <div className="pointer-events-none absolute h-72 w-72 rounded-full bg-emerald-500/10 blur-[120px]" />
-              <h1 className="text-center text-3xl font-light tracking-tight text-white md:text-4xl">
-                What can I help with?
+              <div className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-semibold text-emerald-400 mb-3 shadow-sm">
+                <Bot className="h-3.5 w-3.5" />
+                <span>{selectedAgent?.name || 'Voice Agent'}</span>
+              </div>
+              <h1 className="text-center text-3xl font-semibold tracking-tight text-white md:text-4xl">
+                Ready to speak with {selectedAgent?.name || 'your agent'}?
               </h1>
               <p className="mt-3 max-w-md text-center text-sm text-zinc-400 leading-relaxed">
-                Start a voice session with <span className="text-zinc-200 font-medium">{selectedAgent?.name || 'your agent'}</span> or open an existing conversation from Recents.
+                Click below to start a live voice call directly based on {selectedAgent?.name || 'this agent'}&apos;s voice ({selectedAgent?.ttsVoice || 'alloy'}) and sales persona.
               </p>
               <button
                 type="button"
-                onClick={openNewChatModal}
-                disabled={!selectedAgentId}
-                className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-40 shadow-xl active:scale-95"
+                onClick={() => startCallDirectly()}
+                disabled={creating || !selectedAgentId}
+                className="mt-7 inline-flex items-center gap-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 px-8 py-3.5 text-sm font-bold text-black transition disabled:opacity-40 shadow-[0_0_35px_rgba(16,185,129,0.45)] active:scale-95"
               >
-                <Mic className="h-4 w-4 text-emerald-600" />
-                Start Voice Chat
+                <Phone className="h-4 w-4 fill-current" />
+                <span>{creating ? 'Connecting Call…' : `Start Call with ${selectedAgent?.name || 'Agent'}`}</span>
               </button>
-              <div className="mt-8 flex items-center gap-2 rounded-full border border-white/5 bg-zinc-900/40 px-4 py-1.5 text-xs text-zinc-500 backdrop-blur-sm">
+              <div className="mt-6 flex items-center gap-2 rounded-full border border-white/5 bg-zinc-900/40 px-4 py-1.5 text-xs text-zinc-500 backdrop-blur-sm">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                Voice turns on automatically when a chat is open
+                Call connects instantly with zero setup
               </div>
             </div>
           )}

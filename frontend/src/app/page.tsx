@@ -7,7 +7,7 @@ import { useToast } from '../context/toast-context';
 import { apiClient, Agent } from '../lib/api-client';
 import companyConfig from '../config/company.json';
 import { Loading, EmptyState } from '../components/ui/loading';
-import { Bot, Mic, FileText, ArrowRight, Plus } from 'lucide-react';
+import { Bot, Mic, FileText, ArrowRight, Plus, Phone } from 'lucide-react';
 
 export default function DashboardPage() {
   const { apiKey, currentUser } = useAuth();
@@ -86,10 +86,11 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <Link
-                  href={`/playground?agentId=${agent.id}`}
-                  className="inline-flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--text)]"
+                  href={`/playground?agentId=${agent.id}&startCall=true`}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-black hover:bg-zinc-200 transition shadow-sm active:scale-95"
                 >
-                  Open <ArrowRight className="h-3 w-3" />
+                  <Phone className="h-3 w-3 text-emerald-600 fill-current" />
+                  <span>Start Call</span>
                 </Link>
               </li>
             ))}

@@ -143,13 +143,11 @@ export class ConversationsService {
     return { message: 'Conversation deleted' };
   }
 
-  async extractLeadAndSummary(
-    messages: Array<{ role: string; content: string }>,
-  ): Promise<CallSummaryData> {
+  extractLeadHeuristic(messages: Array<{ role: string; content: string }>): CallSummaryData {
     const dialog = messages.filter((m) => m.role === 'user' || m.role === 'assistant');
     if (dialog.length === 0) {
       return {
-        summary: 'Call connected, but no conversation was recorded.',
+        summary: 'Call connected, but no conversation recorded.',
         leadName: null,
         leadEmail: null,
         leadPhone: null,
@@ -157,6 +155,28 @@ export class ConversationsService {
         productPitched: null,
         nextSteps: 'No action needed',
       };
+    }
+    const transcript = dialog.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join('\n');
+    const emailMatch = transcript.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i);
+    const phoneMatch = transcript.match(/(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
+    const isHigh = /interested|buy|purchase|sign up|price|pricing|demo|cost|quote|deal/i.test(transcript);
+    const isNot = /not interested|stop|don't call|unsubscribe|no thanks/i.test(transcript);
+
+    return {
+      summary: dialog.slice(-2).map((m) => m.content).join(' · ').slice(0, 200) || 'Call concluded.',
+      leadName: null,
+      leadEmail: emailMatch ? emailMatch[0] : null,
+      leadPhone: phoneMatch ? phoneMatch[0] : null,
+      leadInterest: isNot ? 'Not Interested' : isHigh ? 'High' : 'Medium',
+      productPitched: 'Voice Agent Services',
+      nextSteps: emailMatch || phoneMatch ? 'Contact captured lead' : 'Follow up if user returns',
+    };
+  }
+
+  async extractLeadWithLlm(messages: Array<{ role: string; content: string }>): Promise<CallSummaryData> {
+    const dialog = messages.filter((m) => m.role === 'user' || m.role === 'assistant');
+    if (dialog.length === 0) {
+      return this.extractLeadHeuristic(messages);
     }
 
     const transcript = dialog.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join('\n');
@@ -208,17 +228,7 @@ Output JSON format:
         nextSteps: parsed.nextSteps || 'Follow up with customer',
       };
     } catch {
-      const isHigh = /interested|buy|purchase|sign up|price|pricing|demo|cost|quote|deal/i.test(transcript);
-      const isNot = /not interested|stop|don't call|unsubscribe|no thanks/i.test(transcript);
-      return {
-        summary: dialog.slice(-2).map((m) => m.content).join(' · ').slice(0, 200) || 'Call concluded.',
-        leadName: null,
-        leadEmail: emailMatch ? emailMatch[0] : null,
-        leadPhone: phoneMatch ? phoneMatch[0] : null,
-        leadInterest: isNot ? 'Not Interested' : isHigh ? 'High' : 'Medium',
-        productPitched: 'Voice Agent Services',
-        nextSteps: emailMatch || phoneMatch ? 'Contact captured lead' : 'Follow up if user returns',
-      };
+      return this.extractLeadHeuristic(messages);
     }
   }
 
@@ -237,10 +247,11 @@ Output JSON format:
       try {
         callSummary = JSON.parse(existingSummary.content);
       } catch {
-        callSummary = await this.extractLeadAndSummary(messages);
+        callSummary = this.extractLeadHeuristic(messages);
       }
     } else {
-      callSummary = await this.extractLeadAndSummary(messages);
+      // ONLY called the FIRST TIME when the call actually ends
+      callSummary = await this.extractLeadWithLlm(messages);
       await this.prisma.message.create({
         data: {
           conversationId,
@@ -281,19 +292,12 @@ Output JSON format:
       try {
         return JSON.parse(existingSummary.content);
       } catch {
-        // regenerate
+        return this.extractLeadHeuristic(messages);
       }
     }
 
-    const summary = await this.extractLeadAndSummary(messages);
-    await this.prisma.message.create({
-      data: {
-        conversationId,
-        role: 'call_summary',
-        content: JSON.stringify(summary),
-      },
-    });
-    return summary;
+    // Never call LLM on summary fetches — use stored or heuristic fallback
+    return this.extractLeadHeuristic(messages);
   }
 
   async getCallLogs(agentId?: string) {

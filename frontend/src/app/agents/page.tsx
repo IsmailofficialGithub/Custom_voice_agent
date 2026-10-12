@@ -7,7 +7,7 @@ import { useToast } from '../../context/toast-context';
 import { apiClient, Agent } from '../../lib/api-client';
 import { validateAgentName, validateSystemPrompt } from '../../lib/validator';
 import { Loading, EmptyState } from '../../components/ui/loading';
-import { Bot, Plus, Mic, Trash2, Edit3, FileText } from 'lucide-react';
+import { Bot, Plus, Mic, Trash2, Edit3, FileText, Phone } from 'lucide-react';
 import {
   TtsGender,
   TtsVoiceId,
@@ -170,9 +170,13 @@ export default function AgentsPage() {
                   {(agent.enabledTools || []).join(', ') || 'no tools'}
                 </p>
               </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <Link href={`/playground?agentId=${agent.id}`} className="ui-btn ui-btn-ghost" title="Chat">
-                  <Mic className="h-3.5 w-3.5" />
+              <div className="flex shrink-0 items-center gap-2">
+                <Link
+                  href={`/playground?agentId=${agent.id}&startCall=true`}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3.5 py-1.5 text-xs font-semibold text-black hover:bg-zinc-200 transition shadow-sm active:scale-95"
+                >
+                  <Phone className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>Start Call</span>
                 </Link>
                 <Link href={`/documents?agentId=${agent.id}`} className="ui-btn ui-btn-ghost" title="Documents">
                   <FileText className="h-3.5 w-3.5" />
