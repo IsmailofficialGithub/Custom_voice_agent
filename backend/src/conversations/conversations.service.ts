@@ -137,6 +137,17 @@ export class ConversationsService {
     });
   }
 
+  async markConnected(conversationId: string) {
+    try {
+      await this.prisma.conversation.updateMany({
+        where: { id: conversationId, messages: { none: {} } },
+        data: { startedAt: new Date() },
+      });
+    } catch {
+      // ignore
+    }
+  }
+
   async delete(conversationId: string) {
     await this.findOne(conversationId);
     await this.prisma.conversation.delete({ where: { id: conversationId } });
@@ -342,9 +353,29 @@ Output JSON format:
         };
       }
 
-      const durationSeconds = c.endedAt
-        ? Math.max(1, Math.round((c.endedAt.getTime() - c.startedAt.getTime()) / 1000))
-        : null;
+      const dialogMessages = c.messages.filter((m) => m.role === 'user' || m.role === 'assistant');
+
+      let durationSeconds: number | null = null;
+      if (dialogMessages.length >= 2) {
+        const firstMsgTime = dialogMessages[0].createdAt.getTime();
+        const lastMsgTime = dialogMessages[dialogMessages.length - 1].createdAt.getTime();
+
+        let callEnd = lastMsgTime + 10_000;
+        if (c.endedAt) {
+          const endedTime = c.endedAt.getTime();
+          if (endedTime >= lastMsgTime && endedTime - lastMsgTime <= 60_000) {
+            callEnd = endedTime;
+          } else if (endedTime >= lastMsgTime) {
+            callEnd = lastMsgTime + 15_000;
+          }
+        }
+        durationSeconds = Math.max(5, Math.round((callEnd - firstMsgTime) / 1000));
+      } else if (dialogMessages.length === 1) {
+        durationSeconds = 12;
+      } else if (c.endedAt) {
+        const diff = Math.round((c.endedAt.getTime() - c.startedAt.getTime()) / 1000);
+        durationSeconds = Math.min(30, Math.max(1, diff));
+      }
 
       return {
         id: c.id,

@@ -116,10 +116,14 @@ export default function LeadsAndCallLogsPage() {
     const capturedContacts = logs.filter(
       (l) => Boolean(l.callSummary?.leadEmail || l.callSummary?.leadPhone),
     ).length;
+    const validDurations = logs
+      .map((l) => l.durationSeconds)
+      .filter((d): d is number => typeof d === 'number' && d > 0)
+      .map((d) => Math.min(1800, d));
     const avgDurationSeconds =
-      totalCalls > 0
+      validDurations.length > 0
         ? Math.round(
-            logs.reduce((acc, l) => acc + (l.durationSeconds || 0), 0) / totalCalls,
+            validDurations.reduce((acc, d) => acc + d, 0) / validDurations.length,
           )
         : 0;
     return { totalCalls, hotLeads, capturedContacts, avgDurationSeconds };
@@ -157,6 +161,12 @@ export default function LeadsAndCallLogsPage() {
 
   const formatDuration = (seconds?: number | null) => {
     if (!seconds || seconds <= 0) return '—';
+    if (seconds >= 3600) {
+      const hrs = Math.floor(seconds / 3600);
+      const mins = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      return `${hrs}h ${mins}m ${secs}s`;
+    }
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;

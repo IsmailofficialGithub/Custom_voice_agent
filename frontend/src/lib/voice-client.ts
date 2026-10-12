@@ -71,14 +71,14 @@ export class VoiceSessionClient {
 
   // VAD — tuned for natural human conversation & echo suppression
   // VAD — adaptive energy tracking & echo suppression
-  private readonly bargeInThreshold = 75;
-  private readonly silenceDurationMs = 1200;
+  private readonly bargeInThreshold = 92;
+  private readonly silenceDurationMs = 1500;
   private readonly minSpeechDurationMs = 250;
   private readonly preRollMs = 600;
   private readonly speechOnsetNeeded = 4;
   private speechOnsetFrames = 0;
   private bargeInFrames = 0;
-  private readonly bargeInOnsetNeeded = 8;
+  private readonly bargeInOnsetNeeded = 24;
   private latestRms = 0;
   private ambientNoiseFloorRms = 0.003;
   private ambientNoiseFloorLevel = 10;
@@ -508,11 +508,11 @@ export class VoiceSessionClient {
       const normalized = Math.min(100, Math.round((voiceAvg / 128) * 100));
       this.handlers.onAudioLevelChange?.(normalized);
 
-      // Adaptively track ambient background noise floor when not in speech
+      // Adaptively track ambient background noise floor when not in speech (clamped to prevent voice lock-out)
       if (this.currentState === 'listening' || this.currentState === 'idle') {
         if (this.latestRms < 0.04) {
-          this.ambientNoiseFloorRms = this.ambientNoiseFloorRms * 0.96 + this.latestRms * 0.04;
-          this.ambientNoiseFloorLevel = this.ambientNoiseFloorLevel * 0.96 + normalized * 0.04;
+          this.ambientNoiseFloorRms = Math.min(0.015, Math.max(0.002, this.ambientNoiseFloorRms * 0.96 + this.latestRms * 0.04));
+          this.ambientNoiseFloorLevel = Math.min(25, Math.max(8, this.ambientNoiseFloorLevel * 0.96 + normalized * 0.04));
         }
       }
 
@@ -521,9 +521,10 @@ export class VoiceSessionClient {
         return;
       }
 
-      // Barge-in is only allowed if user speaks VERY loudly right at mic to deliberately override
+      // Barge-in requires deliberate, intense user speech (RMS > 0.16) for sustained duration (~400ms)
+      // to ensure speaker audio bleed never cuts off assistant speech
       if (this.currentState === 'speaking' || this.isPlayingQueue) {
-        if (normalized >= this.bargeInThreshold && this.latestRms > 0.05) {
+        if (normalized >= this.bargeInThreshold && this.latestRms > 0.16) {
           this.bargeInFrames += 1;
           if (this.bargeInFrames >= this.bargeInOnsetNeeded) {
             this.bargeInFrames = 0;
@@ -678,7 +679,7 @@ export class VoiceSessionClient {
     const wavBlob = this.encodeWav24kMono(chunks, sampleRate);
     console.log(`[VoiceClient] Speech finished: duration=${speechDuration}ms, chunks=${chunks.length}, size=${wavBlob.size} bytes, rms=${rms.toFixed(5)}`);
 
-    const minRms = Math.max(0.002, this.ambientNoiseFloorRms * 1.1);
+    const minRms = Math.min(0.006, Math.max(0.0015, this.ambientNoiseFloorRms * 1.05));
     if (wavBlob.size >= 8000 && rms >= minRms) {
       console.log(`[VoiceClient] Valid user speech captured (${wavBlob.size} bytes, rms=${rms.toFixed(5)}). Sending turn...`);
       this.isProcessingTurn = true;
@@ -846,7 +847,7 @@ export class VoiceSessionClient {
     }
 
     this.isPlayingQueue = false;
-    this.echoCooldownUntil = Date.now() + 350;
+    this.echoCooldownUntil = Date.now() + 650;
     if (this.endOfResponseReceived && !this.isStaleResponse()) {
       this.resetTurnToListening();
     }
@@ -925,7 +926,7 @@ export class VoiceSessionClient {
   }
 
   private stopCurrentAudio(clearQueue = true) {
-    this.echoCooldownUntil = Date.now() + 350;
+    this.echoCooldownUntil = Date.now() + 650;
     if (clearQueue) {
       this.audioQueue = [];
       this.endOfResponseReceived = false;

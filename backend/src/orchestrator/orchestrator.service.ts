@@ -254,8 +254,8 @@ export class OrchestratorService {
 
       // Ultra-Fast Phrasal Streaming for Voice:
       // 1. Immediately dispatch on terminal punctuation (. ? ! \n), even for single words ("Hello!", "Hi!")
-      // 2. Dispatch on clause pauses (, ; : -) when at least 2 words are ready
-      // 3. Fallback: chunk after 4-5 words on a space boundary so TTS starts immediately
+      // 2. Dispatch on clause pauses (, ; : -): 1 word for first chunk ("Sure,", "Hello,"), 2+ words thereafter
+      // 3. Fallback chunking: 2 words for the very first chunk so TTS begins in ~150ms; 4-5 words for subsequent chunks
       const words = sentenceBuffer.trim().split(/\s+/);
       const hasTerminal = /[.?!;\n]/.test(sentenceBuffer);
       const hasClause = /[,:\-]/.test(sentenceBuffer);
@@ -278,7 +278,8 @@ export class OrchestratorService {
         }
       }
 
-      if (hasClause && words.length >= 2) {
+      const minClauseWords = spokenSentences.length === 0 ? 1 : 2;
+      if (hasClause && words.length >= minClauseWords) {
         const match = sentenceBuffer.match(/^(.*?[,:\-])(?:\s+|$)([\s\S]*)$/);
         if (match) {
           const candidate = match[1].trim();
@@ -293,9 +294,12 @@ export class OrchestratorService {
         }
       }
 
-      if (words.length >= 5 && /\s+$/.test(sentenceBuffer)) {
-        const chunk = words.slice(0, 4).join(' ');
-        sentenceBuffer = words.slice(4).join(' ');
+      // First chunk: dispatch after 2 words on space boundary for instant TTS onset
+      // Subsequent chunks: dispatch after 5 words
+      const targetChunkWords = spokenSentences.length === 0 ? 2 : 5;
+      if (words.length >= targetChunkWords && /\s+$/.test(sentenceBuffer)) {
+        const chunk = words.slice(0, targetChunkWords).join(' ');
+        sentenceBuffer = words.slice(targetChunkWords).join(' ');
         dispatchSentence(chunk).catch((err) => {
           this.logger.warn(`Length dispatch error: ${err}`);
         });

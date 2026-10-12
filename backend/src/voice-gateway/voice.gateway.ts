@@ -126,6 +126,11 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // Persist session metadata in Redis with 10 min TTL
     this.redisService.setSession(conversationId, { authenticated: true, connectedAt: Date.now() }, 600).catch(() => {});
 
+    // Ensure startedAt accurately marks when the live voice session connected
+    if (this.conversations?.markConnected) {
+      this.conversations.markConnected(conversationId).catch(() => {});
+    }
+
     this.send(client, {
       type: 'connected',
       conversationId,
@@ -515,6 +520,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     let llmFirstTokenTime = 0;
     let ttsFirstByteTime = 0;
     let cumulativeText = '';
+    let cumulativeSpokenText = '';
 
     try {
       await this.orchestrator.handleTextTurnStream(
@@ -529,7 +535,6 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
           onToken: (token: string) => {
             if (abortController.signal.aborted) return;
             cumulativeText += token;
-            this.send(client, { type: 'response_text_chunk', text: cumulativeText });
           },
           onSentence: async (sentence) => {
             if (abortController.signal.aborted) return;
@@ -567,6 +572,9 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 );
               }
 
+              // Deliver text in lockstep with audio to eliminate visual/audio lag
+              cumulativeSpokenText += (cumulativeSpokenText ? ' ' : '') + sentence;
+              this.send(client, { type: 'response_text_chunk', text: cumulativeSpokenText });
               this.send(client, { type: 'audio_response_chunk', data: audioBase64 });
             } catch (err: any) {
               if (!abortController.signal.aborted) {
@@ -579,6 +587,9 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
 
       if (!abortController.signal.aborted) {
+        if (cumulativeText) {
+          this.send(client, { type: 'response_text_chunk', text: cumulativeText });
+        }
         this.send(client, { type: 'end_of_response' });
       }
     } catch (err: any) {
@@ -717,6 +728,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.send(client, { type: 'status', status: 'thinking' });
 
     let cumulativeText = '';
+    let cumulativeSpokenText = '';
     const requestStartTime = Date.now();
     let llmFirstTokenTime = 0;
     let ttsFirstByteTime: number | null = null;
@@ -734,7 +746,6 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
           onToken: (token: string) => {
             if (abortController.signal.aborted) return;
             cumulativeText += token;
-            this.send(client, { type: 'response_text_chunk', text: cumulativeText });
           },
           onSentence: async (sentence) => {
             if (abortController.signal.aborted) return;
@@ -768,6 +779,9 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 });
               }
 
+              // Deliver text in lockstep with audio to eliminate visual/audio lag
+              cumulativeSpokenText += (cumulativeSpokenText ? ' ' : '') + sentence;
+              this.send(client, { type: 'response_text_chunk', text: cumulativeSpokenText });
               this.send(client, { type: 'audio_response_chunk', data: audioBase64 });
             } catch (err: any) {
               if (!abortController.signal.aborted) {
@@ -780,6 +794,9 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
 
       if (!abortController.signal.aborted) {
+        if (cumulativeText) {
+          this.send(client, { type: 'response_text_chunk', text: cumulativeText });
+        }
         this.send(client, { type: 'end_of_response' });
       }
     } catch (err: any) {
