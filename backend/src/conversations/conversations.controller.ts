@@ -47,6 +47,26 @@ export class ConversationsController {
     return this.orchestratorService.handleTextTurn(id, dto.content);
   }
 
+  @Get('call-logs')
+  getCallLogsAll() {
+    return this.conversationsService.getCallLogs();
+  }
+
+  @Get('conversations/logs')
+  getConversationsLogs() {
+    return this.conversationsService.getCallLogs();
+  }
+
+  @Get('agents/:agentId/call-logs')
+  getAgentCallLogs(@Param('agentId') agentId: string) {
+    return this.conversationsService.getCallLogs(agentId);
+  }
+
+  @Get('conversations/:id/summary')
+  getConversationSummary(@Param('id') id: string) {
+    return this.conversationsService.getSummary(id);
+  }
+
   @Post('conversations/:id/end')
   @HttpCode(HttpStatus.OK)
   end(@Param('id') id: string) {

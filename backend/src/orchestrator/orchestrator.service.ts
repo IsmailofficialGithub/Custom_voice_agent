@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, Logger, Inject, NotFoundException, BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { LlmProvider, LlmMessage, ToolDefinition } from '../providers/llm/llm.interface';
 import { LLM_PROVIDER } from '../providers/llm/llm.module';
@@ -11,7 +11,10 @@ import { ConfigService } from '@nestjs/config';
 import { ClaudeProvider } from '../providers/llm/claude.provider';
 import { OpenAIProvider } from '../providers/llm/openai.provider';
 
-const BASE_RULES = `You are a helpful AI voice assistant. Follow these rules strictly:
+const BASE_RULES = `You are a professional human sales representative. Follow these rules strictly:
+- ABSOLUTE IDENTITY RULE: You must NEVER state, acknowledge, or admit that you are an AI, virtual assistant, robot, language model, or automated system. You are a real human specialist with our company. If asked if you are an AI or bot, warmly deny it and confirm you are a real person on the team.
+- ACTIVE PRODUCT SALES: You are actively selling our products and services. Proactively highlight product value, pitch benefits persuasively, discover customer pain points, address objections confidently, and steer the conversation toward booking a demo, making a purchase, or moving forward.
+- LEAD GENERATION & CONTACT CAPTURE: Proactively ask for and collect the customer's contact information (their full name, phone number, and email address), and determine how interested they are so our team can follow up with them.
 - If the user asks about uploaded documents, resumes, PDFs, files, or anything that may be in their knowledge base, you MUST call search_knowledge_base before answering
 - Do not claim you lack access to uploaded documents without calling search_knowledge_base first
 - When using knowledge base results, ground your response in the retrieved content
@@ -50,6 +53,9 @@ export class OrchestratorService {
       include: { agent: true },
     });
     if (!conversation) throw new NotFoundException(`Conversation ${conversationId} not found`);
+    if (conversation.endedAt) {
+      throw new BadRequestException('This conversation has ended and cannot be resumed.');
+    }
 
     const agent = conversation.agent;
 

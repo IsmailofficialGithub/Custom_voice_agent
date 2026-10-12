@@ -51,13 +51,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<UserProfile>(GUEST_USER);
 
   useEffect(() => {
-    const savedKey = localStorage.getItem(SESSION_KEY) || '';
-    let activeKey = savedKey;
-    if (!activeKey && DEFAULT_KEY && DEFAULT_KEY !== 'dev-secret-key-change-me') {
-      activeKey = DEFAULT_KEY;
-    }
-    if (activeKey) {
-      setApiKeyState(activeKey);
+    const savedKey = (localStorage.getItem(SESSION_KEY) || '').trim();
+    if (savedKey && savedKey !== 'dev-secret-key-change-me') {
+      setApiKeyState(savedKey);
+    } else if (savedKey === 'dev-secret-key-change-me') {
+      localStorage.removeItem(SESSION_KEY);
     }
     const saved = localStorage.getItem('axiomra_user');
     if (saved) {

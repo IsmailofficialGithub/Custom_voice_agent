@@ -1,17 +1,26 @@
 'use client';
 
-import React from 'react';
-import { usePathname } from 'next/navigation';
+import React, { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { Header } from './header';
 import { Sidebar } from './sidebar';
 import { useAuth } from '../../context/auth-context';
-import { LoginPage } from '../auth/login-page';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { apiKey, ready } = useAuth();
   const isPlayground = pathname?.startsWith('/playground');
   const isLoginRoute = pathname === '/login';
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!apiKey && !isLoginRoute) {
+      router.replace('/login');
+    } else if (apiKey && isLoginRoute) {
+      router.replace('/');
+    }
+  }, [ready, apiKey, isLoginRoute, router]);
 
   if (!ready) {
     return (
@@ -26,7 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   if (!apiKey) {
-    return <LoginPage />;
+    return null;
   }
 
   if (isPlayground) {
