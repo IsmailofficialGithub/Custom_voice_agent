@@ -25,6 +25,7 @@ import {
   PhoneOff,
   FileSpreadsheet,
   Users,
+  Sparkles,
 } from 'lucide-react';
 import {
   TtsGender,
@@ -33,6 +34,7 @@ import {
   voicesForGender,
   genderForVoice,
 } from '../../lib/tts-voices';
+import { AGENT_PRESETS } from '../../lib/agent-presets';
 
 function CompletedConversationView({
   conversation,
@@ -859,6 +861,45 @@ function PlaygroundContent() {
             </div>
 
             <form onSubmit={handleCreateAgent} className="space-y-4">
+              {/* Preset Selector */}
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+                    <span>Choose from 10 Best Ready-Made Agent Templates</span>
+                  </label>
+                  <span className="text-[10px] text-zinc-400">Auto-fills prompt & settings</span>
+                </div>
+                <select
+                  onChange={(e) => {
+                    const preset = AGENT_PRESETS.find((p) => p.id === e.target.value);
+                    if (preset) {
+                      setNewAgentName(preset.name);
+                      setNewAgentPrompt(preset.systemPrompt);
+                      setNewAgentProvider(preset.llmProvider);
+                      setNewAgentModel(preset.llmModel);
+                      setNewAgentVoice(preset.ttsVoice);
+                      setNewAgentGender(preset.ttsGender);
+                      setNewAgentTools(preset.enabledTools);
+                      setNewAgentStartPhrase(preset.startPhrase);
+                      setNewAgentEndPhrase(preset.endPhrase);
+                      setNewAgentFarewellMessage(preset.farewellMessage);
+                    }
+                  }}
+                  defaultValue=""
+                  className="w-full rounded-lg border border-emerald-500/40 bg-zinc-900 px-3 py-2 text-xs font-medium text-white focus:outline-none focus:border-emerald-400"
+                >
+                  <option value="" disabled>
+                    -- Select an Agent Template (e.g. Hospital Receptionist, Sales Executive) --
+                  </option>
+                  {AGENT_PRESETS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label} ({p.category})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-medium text-zinc-300 mb-1">Agent Name</label>
                 <input

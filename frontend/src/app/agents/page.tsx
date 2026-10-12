@@ -7,7 +7,7 @@ import { useToast } from '../../context/toast-context';
 import { apiClient, Agent } from '../../lib/api-client';
 import { validateAgentName, validateSystemPrompt } from '../../lib/validator';
 import { Loading, EmptyState } from '../../components/ui/loading';
-import { Bot, Plus, Mic, Trash2, Edit3, FileText, Phone } from 'lucide-react';
+import { Bot, Plus, Mic, Trash2, Edit3, FileText, Phone, Sparkles } from 'lucide-react';
 import {
   TtsGender,
   TtsVoiceId,
@@ -15,6 +15,7 @@ import {
   voicesForGender,
   genderForVoice,
 } from '../../lib/tts-voices';
+import { AGENT_PRESETS } from '../../lib/agent-presets';
 
 const TOOLS = [
   { id: 'get_time', label: 'Time' },
@@ -204,6 +205,42 @@ export default function AgentsPage() {
             </div>
 
             <div className="space-y-4">
+              {!editingAgent && (
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-emerald-300 flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
+                      <span>Choose from 10 Best Ready-Made Agent Templates</span>
+                    </label>
+                    <span className="text-[10px] text-zinc-400">Auto-fills prompt & voice</span>
+                  </div>
+                  <select
+                    onChange={(e) => {
+                      const preset = AGENT_PRESETS.find((p) => p.id === e.target.value);
+                      if (preset) {
+                        setName(preset.name);
+                        setSystemPrompt(preset.systemPrompt);
+                        setLlmProvider(preset.llmProvider);
+                        setLlmModel(preset.llmModel);
+                        setTtsVoice(preset.ttsVoice);
+                        setTtsGender(preset.ttsGender);
+                        setEnabledTools(preset.enabledTools);
+                      }
+                    }}
+                    defaultValue=""
+                    className="w-full rounded-md border border-emerald-500/40 bg-[var(--bg-elevated)] px-2.5 py-1.5 text-xs font-medium text-white focus:outline-none"
+                  >
+                    <option value="" disabled>
+                      -- Select an Agent Template (e.g. Hospital Receptionist, Sales Executive) --
+                    </option>
+                    {AGENT_PRESETS.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label} ({p.category})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="ui-label">Name</label>
                 <input className="ui-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Support agent" />
