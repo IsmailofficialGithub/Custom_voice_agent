@@ -3,6 +3,7 @@
     { "title": "Home", "href": "/", "icon": "LayoutDashboard" },
     { "title": "Agents", "href": "/agents", "icon": "Bot" },
     { "title": "Chat", "href": "/playground", "icon": "Mic" },
+    { "title": "Leads & Logs", "href": "/leads", "icon": "Users" },
     { "title": "Documents", "href": "/documents", "icon": "FileText" },
     { "title": "Memory", "href": "/memory", "icon": "Brain" }
   ],

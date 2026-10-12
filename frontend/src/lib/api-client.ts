@@ -18,6 +18,16 @@ export interface Agent {
   updatedAt: string;
 }
 
+export interface CallSummaryData {
+  summary: string;
+  leadName?: string | null;
+  leadEmail?: string | null;
+  leadPhone?: string | null;
+  leadInterest: 'High' | 'Medium' | 'Low' | 'Not Interested';
+  productPitched?: string | null;
+  nextSteps?: string | null;
+}
+
 export interface Conversation {
   id: string;
   agentId: string;
@@ -28,11 +38,17 @@ export interface Conversation {
   startedAt: string;
   endedAt: string | null;
   messageCount?: number;
+  callSummary?: CallSummaryData | null;
   lastMessage?: {
     role: string;
     content: string;
     createdAt: string;
   } | null;
+}
+
+export interface CallLogItem extends Conversation {
+  agentName?: string;
+  durationSeconds?: number | null;
 }
 
 
@@ -137,6 +153,10 @@ export const apiClient = {
     fetchWithAuth<{ role: string; content: string }>(`/conversations/${conversationId}/messages`, { method: 'POST', body: JSON.stringify({ content }), headers: { 'Content-Type': 'application/json' } }, apiKey),
   endConversation: (conversationId: string, apiKey: string) =>
     fetchWithAuth<Conversation>(`/conversations/${conversationId}/end`, { method: 'POST' }, apiKey),
+  getCallLogs: (apiKey: string, agentId?: string) =>
+    fetchWithAuth<CallLogItem[]>(agentId ? `/agents/${agentId}/call-logs` : `/call-logs`, {}, apiKey),
+  getCallSummary: (conversationId: string, apiKey: string) =>
+    fetchWithAuth<CallSummaryData>(`/conversations/${conversationId}/summary`, {}, apiKey),
 
   // Documents (RAG)
   getDocuments: (agentId: string, apiKey: string) => fetchWithAuth<DocumentItem[]>(`/agents/${agentId}/documents`, {}, apiKey),

@@ -21,6 +21,9 @@ import {
   FileText,
   Plus,
   Mic,
+  PhoneOff,
+  FileSpreadsheet,
+  Users,
 } from 'lucide-react';
 import {
   TtsGender,
@@ -29,6 +32,191 @@ import {
   voicesForGender,
   genderForVoice,
 } from '../../lib/tts-voices';
+
+function CompletedConversationView({
+  conversation,
+  agentName,
+  apiKey,
+  onStartNewCall,
+}: {
+  conversation: Conversation;
+  agentName: string;
+  apiKey: string;
+  onStartNewCall: () => void;
+}) {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>(conversation.callSummary || null);
+  const [loading, setLoading] = useState(!conversation.callSummary);
+
+  useEffect(() => {
+    apiClient
+      .getMessages(conversation.id, apiKey)
+      .then((msgs) => {
+        setMessages(msgs.filter((m) => m.role === 'user' || m.role === 'assistant'));
+      })
+      .catch(() => {});
+
+    if (!conversation.callSummary) {
+      setLoading(true);
+      apiClient
+        .getCallSummary(conversation.id, apiKey)
+        .then((res) => {
+          setSummary(res);
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
+  }, [conversation.id, apiKey]);
+
+  const interestBadge = (level?: string) => {
+    const l = level?.toLowerCase();
+    if (l === 'high') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 px-2.5 py-0.5 text-xs font-semibold text-emerald-400">
+          🔥 High Interest
+        </span>
+      );
+    }
+    if (l === 'medium') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/40 px-2.5 py-0.5 text-xs font-semibold text-amber-400">
+          ⚡ Medium Interest
+        </span>
+      );
+    }
+    if (l === 'low') {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/15 border border-blue-500/40 px-2.5 py-0.5 text-xs font-semibold text-blue-400">
+          💧 Low Interest
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-zinc-800 border border-zinc-700 px-2.5 py-0.5 text-xs font-medium text-zinc-400">
+        Not Interested
+      </span>
+    );
+  };
+
+  return (
+    <div className="flex h-full flex-col overflow-y-auto px-4 py-6 md:px-8 max-w-5xl mx-auto space-y-6">
+      {/* Alert banner stating call is completed and cannot be resumed */}
+      <div className="flex items-center justify-between rounded-2xl border border-rose-500/30 bg-rose-950/20 px-5 py-4 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/20 text-rose-400">
+            <PhoneOff className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-rose-200">Call Completed · Cannot Resume</h3>
+            <p className="text-xs text-rose-300/80 mt-0.5">
+              This session has ended and cannot be resumed. Below are the call summary, lead details, and transcript.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onStartNewCall}
+          className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-semibold text-black hover:bg-zinc-200 transition active:scale-95 shadow-lg"
+        >
+          <Mic className="h-3.5 w-3.5 text-emerald-600" />
+          Start New Call
+        </button>
+      </div>
+
+      {/* Summary & Leads Intelligence Table Card */}
+      <div className="rounded-2xl border border-white/10 bg-zinc-900/60 backdrop-blur-xl p-6 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
+          <div className="flex items-center gap-2.5">
+            <FileSpreadsheet className="h-5 w-5 text-emerald-400" />
+            <h2 className="text-base font-semibold text-white">Call Summary & Lead Details</h2>
+          </div>
+          {summary && interestBadge(summary.leadInterest)}
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-zinc-400 py-6 text-center">Analyzing call transcript & extracting lead data…</p>
+        ) : summary ? (
+          <div className="space-y-6">
+            {/* Structured Table */}
+            <div className="overflow-hidden rounded-xl border border-white/10">
+              <table className="w-full text-left text-xs">
+                <tbody className="divide-y divide-white/5 bg-zinc-950/50">
+                  <tr className="hover:bg-white/[0.02]">
+                    <td className="w-48 px-4 py-3 font-semibold text-zinc-400 bg-zinc-900/40">Customer / Lead Name</td>
+                    <td className="px-4 py-3 font-medium text-white">{summary.leadName || <span className="text-zinc-500 italic">Not provided</span>}</td>
+                  </tr>
+                  <tr className="hover:bg-white/[0.02]">
+                    <td className="w-48 px-4 py-3 font-semibold text-zinc-400 bg-zinc-900/40">Email Address</td>
+                    <td className="px-4 py-3 font-medium text-white">
+                      {summary.leadEmail ? (
+                        <a href={`mailto:${summary.leadEmail}`} className="text-emerald-400 hover:underline">{summary.leadEmail}</a>
+                      ) : (
+                        <span className="text-zinc-500 italic">Not provided</span>
+                      )}
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-white/[0.02]">
+                    <td className="w-48 px-4 py-3 font-semibold text-zinc-400 bg-zinc-900/40">Phone Number</td>
+                    <td className="px-4 py-3 font-medium text-white">
+                      {summary.leadPhone ? (
+                        <a href={`tel:${summary.leadPhone}`} className="text-emerald-400 hover:underline">{summary.leadPhone}</a>
+                      ) : (
+                        <span className="text-zinc-500 italic">Not provided</span>
+                      )}
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-white/[0.02]">
+                    <td className="w-48 px-4 py-3 font-semibold text-zinc-400 bg-zinc-900/40">Interest Level</td>
+                    <td className="px-4 py-3 font-medium">{interestBadge(summary.leadInterest)}</td>
+                  </tr>
+                  <tr className="hover:bg-white/[0.02]">
+                    <td className="w-48 px-4 py-3 font-semibold text-zinc-400 bg-zinc-900/40">Product Pitched</td>
+                    <td className="px-4 py-3 text-zinc-200">{summary.productPitched || 'Product sales pitch'}</td>
+                  </tr>
+                  <tr className="hover:bg-white/[0.02]">
+                    <td className="w-48 px-4 py-3 font-semibold text-zinc-400 bg-zinc-900/40">Recommended Next Steps</td>
+                    <td className="px-4 py-3 text-emerald-300 font-medium">{summary.nextSteps || 'Follow up with lead'}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Executive Summary */}
+            <div className="rounded-xl border border-white/5 bg-zinc-950/40 p-4">
+              <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">Executive Summary</h4>
+              <p className="text-sm text-zinc-200 leading-relaxed">{summary.summary}</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-zinc-500 py-4 text-center">No summary data available for this call.</p>
+        )}
+      </div>
+
+      {/* Transcript Card */}
+      {messages.length > 0 && (
+        <div className="rounded-2xl border border-white/10 bg-zinc-900/40 backdrop-blur-xl p-6 shadow-xl">
+          <h3 className="text-sm font-semibold text-white mb-4">Verbatim Conversation Transcript ({messages.length} turns)</h3>
+          <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+            {messages.map((m, idx) => (
+              <div key={idx} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                    m.role === 'user' ? 'bg-zinc-800 text-white' : 'bg-zinc-900 border border-white/10 text-zinc-200'
+                  }`}
+                >
+                  <span className="block font-semibold text-[10px] text-zinc-400 mb-0.5">
+                    {m.role === 'user' ? 'Lead / Customer' : agentName}
+                  </span>
+                  <p>{m.content}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function PlaygroundContent() {
   const { apiKey } = useAuth();
@@ -53,7 +241,9 @@ function PlaygroundContent() {
   const [showCreateAgentModal, setShowCreateAgentModal] = useState(false);
   const [creatingAgent, setCreatingAgent] = useState(false);
   const [newAgentName, setNewAgentName] = useState('');
-  const [newAgentPrompt, setNewAgentPrompt] = useState('You are a helpful voice assistant. Answer clearly and concisely.');
+  const [newAgentPrompt, setNewAgentPrompt] = useState(
+    'You are a high-performing sales executive. Never reveal you are an AI. Actively pitch our products, discover customer needs, answer questions with persuasive benefits, and capture the customer\'s name, phone number, and email.'
+  );
   const [newAgentProvider, setNewAgentProvider] = useState<'openai' | 'claude'>('openai');
   const [newAgentModel, setNewAgentModel] = useState('gpt-4o');
   const [newAgentVoice, setNewAgentVoice] = useState<TtsVoiceId>('alloy');
@@ -65,7 +255,9 @@ function PlaygroundContent() {
 
   const openCreateAgentModal = () => {
     setNewAgentName('');
-    setNewAgentPrompt('You are a helpful voice assistant. Answer clearly and concisely.');
+    setNewAgentPrompt(
+      'You are a high-performing sales executive. Never reveal you are an AI. Actively pitch our products, discover customer needs, answer questions with persuasive benefits, and capture the customer\'s name, phone number, and email.'
+    );
     setNewAgentProvider('openai');
     setNewAgentModel('gpt-4o');
     setNewAgentVoice('alloy');
@@ -196,17 +388,34 @@ function PlaygroundContent() {
 
   const openChat = (chat: Conversation) => setActiveConversation(chat);
 
+  const handleCallEnded = async (summary?: any) => {
+    if (activeConversation) {
+      setActiveConversation((prev) =>
+        prev
+          ? {
+              ...prev,
+              endedAt: prev.endedAt || new Date().toISOString(),
+              callSummary: summary || prev.callSummary,
+            }
+          : null
+      );
+    }
+    if (selectedAgentId) await loadConversations(selectedAgentId);
+  };
+
   const closeChat = async () => {
     const current = activeConversation;
-    setActiveConversation(null);
-    if (current) {
+    if (current && !current.endedAt) {
       try {
-        await apiClient.endConversation(current.id, apiKey);
+        const res = await apiClient.endConversation(current.id, apiKey);
+        handleCallEnded(res.callSummary);
       } catch {
         // ignore
       }
-      if (selectedAgentId) await loadConversations(selectedAgentId);
+    } else {
+      setActiveConversation(null);
     }
+    if (selectedAgentId) await loadConversations(selectedAgentId);
   };
 
   const deleteChat = async (e: React.MouseEvent, chat: Conversation) => {
@@ -300,10 +509,15 @@ function PlaygroundContent() {
                     <button
                       type="button"
                       onClick={() => openChat(chat)}
-                      className="min-w-0 flex-1 truncate px-3 py-2 text-left text-sm text-zinc-200"
+                      className="min-w-0 flex-1 truncate px-3 py-2 text-left text-sm text-zinc-200 flex items-center justify-between"
                       title={chat.contextPrompt || chat.title || ''}
                     >
-                      {chat.title || 'Untitled chat'}
+                      <span className="truncate">{chat.title || 'Untitled chat'}</span>
+                      {chat.endedAt && (
+                        <span className="ml-1.5 shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium bg-zinc-700/60 text-zinc-400">
+                          Ended
+                        </span>
+                      )}
                     </button>
                     <button
                       type="button"
@@ -320,6 +534,13 @@ function PlaygroundContent() {
         </div>
 
         <div className="border-t border-zinc-800 p-3 space-y-1">
+          <Link
+            href="/leads"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+          >
+            <Users className="h-4 w-4" />
+            Leads & Call logs
+          </Link>
           {selectedAgentId && (
             <Link
               href={`/documents?agentId=${selectedAgentId}`}
@@ -393,14 +614,25 @@ function PlaygroundContent() {
 
         <div className="min-h-0 flex-1">
           {activeConversation ? (
-            <ChatWorkspace
-              key={activeConversation.id}
-              conversationId={activeConversation.id}
-              apiKey={apiKey}
-              agentName={selectedAgent?.name || 'Assistant'}
-              onError={(err) => showError(err, 'Voice')}
-              onClose={closeChat}
-            />
+            activeConversation.endedAt ? (
+              <CompletedConversationView
+                key={activeConversation.id}
+                conversation={activeConversation}
+                agentName={selectedAgent?.name || 'Assistant'}
+                apiKey={apiKey}
+                onStartNewCall={openNewChatModal}
+              />
+            ) : (
+              <ChatWorkspace
+                key={activeConversation.id}
+                conversationId={activeConversation.id}
+                apiKey={apiKey}
+                agentName={selectedAgent?.name || 'Assistant'}
+                onError={(err) => showError(err, 'Voice')}
+                onClose={closeChat}
+                onEndCall={handleCallEnded}
+              />
+            )
           ) : agents.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center px-4 text-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-zinc-900 text-zinc-300 shadow-2xl mb-4 ring-1 ring-white/5">

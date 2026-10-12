@@ -58,7 +58,9 @@ export default function AgentsPage() {
   const openCreateModal = () => {
     setEditingAgent(null);
     setName('');
-    setSystemPrompt('You are a helpful voice assistant. Answer clearly and concisely.');
+    setSystemPrompt(
+      'You are a high-performing sales executive. Never reveal you are an AI. Actively pitch our products, discover customer needs, answer questions with persuasive benefits, and capture the customer\'s name, phone number, and email.'
+    );
     setLlmProvider('openai');
     setLlmModel('gpt-4o');
     setEnabledTools(['get_time', 'web_search', 'search_knowledge_base']);

@@ -4,12 +4,13 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import uiConfig from '../../config/ui.json';
-import { LayoutDashboard, Bot, Mic, FileText, Brain } from 'lucide-react';
+import { LayoutDashboard, Bot, Mic, FileText, Brain, Users } from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   LayoutDashboard: <LayoutDashboard className="h-4 w-4" />,
   Bot: <Bot className="h-4 w-4" />,
   Mic: <Mic className="h-4 w-4" />,
+  Users: <Users className="h-4 w-4" />,
   FileText: <FileText className="h-4 w-4" />,
   Brain: <Brain className="h-4 w-4" />,
 };

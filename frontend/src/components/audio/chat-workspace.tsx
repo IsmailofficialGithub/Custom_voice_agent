@@ -19,6 +19,7 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  PhoneOff,
 } from 'lucide-react';
 import { AiOrb, OrbTheme } from './ai-orb';
 
@@ -42,6 +43,7 @@ interface Props {
   agentName: string;
   onError?: (err: string) => void;
   onClose?: () => void;
+  onEndCall?: (summary?: any) => void;
 }
 
 function mapHistory(messages: Message[]): ChatBubble[] {
@@ -54,7 +56,7 @@ function mapHistory(messages: Message[]): ChatBubble[] {
     }));
 }
 
-export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onClose }: Props) {
+export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onClose, onEndCall }: Props) {
   const [messages, setMessages] = useState<ChatBubble[]>([]);
   const [inputText, setInputText] = useState('');
   const [callState, setCallState] = useState<VoiceState>('connecting');
@@ -182,12 +184,20 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
               if (start) setStartPhrase(start);
               if (end) setEndPhrase(end);
             },
-            onSessionEnded: (reason) => {
+            onSessionEnded: async (reason) => {
               setSessionEndedReason(reason);
               setCallState('disconnected');
-              setTimeout(() => {
-                onClose?.();
-              }, 1200);
+              try {
+                const updated = await apiClient.endConversation(conversationId, apiKey);
+                setTimeout(() => {
+                  if (onEndCall) onEndCall(updated.callSummary);
+                  else onClose?.();
+                }, 1200);
+              } catch {
+                setTimeout(() => {
+                  onClose?.();
+                }, 1200);
+              }
             },
             onLatencyMetrics: (metrics) => {
               const latency: LatencyInfo = {
@@ -317,6 +327,32 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
     turnStartTimeRef.current = null;
     setTurnElapsedMs(null);
     clientRef.current?.interrupt();
+  };
+
+  const [endingCall, setEndingCall] = useState(false);
+
+  const handleEndCall = async () => {
+    if (endingCall) return;
+    setEndingCall(true);
+    setCallState('disconnected');
+    try {
+      if (turnTimerIntervalRef.current) {
+        clearInterval(turnTimerIntervalRef.current);
+        turnTimerIntervalRef.current = null;
+      }
+      if (clientRef.current) {
+        clientRef.current.interrupt();
+        clientRef.current.disconnect();
+      }
+      const updated = await apiClient.endConversation(conversationId, apiKey);
+      if (onEndCall) {
+        onEndCall(updated.callSummary);
+      } else {
+        onClose?.();
+      }
+    } catch {
+      onClose?.();
+    }
   };
 
   const resetChat = async () => {
@@ -478,17 +514,29 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
 
       {/* Main Interactive Stage */}
       <div className="relative flex flex-1 flex-col items-center justify-between overflow-y-auto px-4 py-4 md:px-8">
-        {/* Dynamic Status Headline */}
+        {/* Dynamic Status Headline & Centered End Call Action */}
         <div className="my-2 flex flex-col items-center text-center">
           <h2 className="text-xl md:text-2xl font-normal tracking-tight bg-gradient-to-b from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent transition-all duration-300 drop-shadow-sm">
             {getStatusHeadline()}
           </h2>
-          {turnElapsedMs !== null && (
-            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-950/60 px-3 py-0.5 text-xs font-mono text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.2)]">
-              <Zap className="h-3 w-3 animate-pulse" />
-              {(turnElapsedMs / 1000).toFixed(2)}s turn
-            </div>
-          )}
+          <div className="mt-3 flex items-center justify-center gap-3">
+            {turnElapsedMs !== null && (
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-950/60 px-3 py-1 text-xs font-mono text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+                <Zap className="h-3 w-3 animate-pulse" />
+                {(turnElapsedMs / 1000).toFixed(2)}s turn
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={handleEndCall}
+              disabled={endingCall}
+              className="inline-flex items-center gap-2 rounded-full border border-rose-500/50 bg-rose-500/20 px-4 py-1.5 text-xs font-semibold text-rose-300 shadow-[0_0_20px_rgba(244,63,94,0.3)] backdrop-blur-md transition hover:bg-rose-600 hover:text-white hover:border-rose-600 active:scale-95 disabled:opacity-50"
+              title="End active call"
+            >
+              <PhoneOff className="h-3.5 w-3.5" />
+              <span>{endingCall ? 'Ending Call…' : 'End Call'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Centered 3D Glowing AI Globe with Dynamic Pulse Halo */}
@@ -670,8 +718,8 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
               })}
             </div>
 
-            {/* Center: Glowing Circular Microphone Button */}
-            <div className="relative flex items-center justify-center">
+            {/* Center: Microphone & Prominent End Call Buttons */}
+            <div className="relative flex items-center justify-center gap-3">
               {/* Outer pulsing ring when speaking */}
               {(callState === 'user_speaking' || callState === 'speaking') && (
                 <span
@@ -705,6 +753,17 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
                 ) : (
                   <Mic className="h-6 w-6 group-hover:scale-105 transition-transform" />
                 )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleEndCall}
+                disabled={endingCall}
+                className="flex h-12 items-center gap-2 rounded-full bg-gradient-to-r from-rose-600 to-red-600 px-4 text-xs font-bold text-white shadow-[0_0_20px_rgba(225,29,72,0.5)] transition hover:from-rose-500 hover:to-red-500 active:scale-95 disabled:opacity-50 ring-2 ring-rose-500/40"
+                title="End Call & View Summary"
+              >
+                <PhoneOff className="h-4 w-4" />
+                <span>{endingCall ? 'Ending…' : 'End Call'}</span>
               </button>
             </div>
 
