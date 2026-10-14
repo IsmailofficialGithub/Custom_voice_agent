@@ -1,18 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/auth-context';
-import { apiClient } from '../../lib/api-client';
 import companyConfig from '../../config/company.json';
-import { Key, Mail, Lock, User as UserIcon, ArrowRight, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Key, Mail, Lock, User as UserIcon, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export function LoginPage() {
   const router = useRouter();
   const { login, register, loginWithApiKey, apiKey, currentUser, logout } = useAuth();
 
   const [authMethod, setAuthMethod] = useState<'password' | 'apikey'>('password');
-  const [formMode, setFormMode] = useState<'login' | 'setup' | 'register'>('login');
+  const [formMode, setFormMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,29 +19,12 @@ export function LoginPage() {
   const [devKey, setDevKey] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [setupChecked, setSetupChecked] = useState(false);
-
-  useEffect(() => {
-    apiClient
-      .getSetupStatus()
-      .then((status) => {
-        if (!status.isSetup) {
-          setFormMode('setup');
-        } else {
-          setFormMode('login');
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        setSetupChecked(true);
-      });
-  }, []);
 
   const handleSubmitPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (formMode === 'setup' || formMode === 'register') {
+    if (formMode === 'register') {
       if (password.length < 6) {
         setError('Password must be at least 6 characters');
         return;
@@ -95,10 +77,10 @@ export function LoginPage() {
             {companyConfig.logo}
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">
-            Welcome to {companyConfig.name}
+            {formMode === 'register' ? 'Create an account' : 'Sign in to your account'}
           </h1>
           <p className="text-xs text-[var(--text-muted)]">
-            {companyConfig.tagline} · v{companyConfig.version}
+            {companyConfig.name} · {companyConfig.tagline}
           </p>
         </div>
 
@@ -127,19 +109,6 @@ export function LoginPage() {
                   Sign out
                 </button>
               </div>
-            </div>
-          )}
-
-          {/* First time setup banner */}
-          {formMode === 'setup' && (
-            <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 text-xs text-emerald-300 space-y-1">
-              <div className="flex items-center gap-2 font-semibold text-emerald-400">
-                <Sparkles className="h-4 w-4 text-emerald-400" />
-                <span>First-Time Setup · Create Database Password</span>
-              </div>
-              <p className="text-[11px] text-emerald-300/80">
-                Welcome! Create your master password. It will be stored securely as a hashed record in the database.
-              </p>
             </div>
           )}
 
@@ -174,15 +143,15 @@ export function LoginPage() {
           {/* Password Auth Form */}
           {authMethod === 'password' && (
             <form onSubmit={handleSubmitPassword} className="space-y-4">
-              {(formMode === 'setup' || formMode === 'register') && (
+              {formMode === 'register' && (
                 <div>
-                  <label className="ui-label">Your Name</label>
+                  <label className="ui-label">Full Name</label>
                   <div className="relative mt-1">
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Admin"
+                      placeholder="Your name"
                       className="ui-input pr-8"
                     />
                     <UserIcon className="absolute right-2.5 top-2.5 h-4 w-4 text-[var(--text-faint)] pointer-events-none" />
@@ -191,7 +160,7 @@ export function LoginPage() {
               )}
 
               <div>
-                <label className="ui-label">Email address</label>
+                <label className="ui-label">Email</label>
                 <div className="relative mt-1">
                   <input
                     type="email"
@@ -206,9 +175,7 @@ export function LoginPage() {
               </div>
 
               <div>
-                <label className="ui-label">
-                  {formMode === 'setup' ? 'Create Password' : 'Password'}
-                </label>
+                <label className="ui-label">Password</label>
                 <div className="relative mt-1">
                   <input
                     type="password"
@@ -222,7 +189,7 @@ export function LoginPage() {
                 </div>
               </div>
 
-              {(formMode === 'setup' || formMode === 'register') && (
+              {formMode === 'register' && (
                 <div>
                   <label className="ui-label">Confirm Password</label>
                   <div className="relative mt-1">
@@ -234,7 +201,7 @@ export function LoginPage() {
                       placeholder="••••••••"
                       className="ui-input pr-8"
                     />
-                    <CheckCircle2 className="absolute right-2.5 top-2.5 h-4 w-4 text-[var(--text-faint)] pointer-events-none" />
+                    <Lock className="absolute right-2.5 top-2.5 h-4 w-4 text-[var(--text-faint)] pointer-events-none" />
                   </div>
                 </div>
               )}
@@ -252,11 +219,9 @@ export function LoginPage() {
               >
                 <span>
                   {busy
-                    ? 'Processing…'
-                    : formMode === 'setup'
-                    ? 'Create Database Account & Sign In'
+                    ? 'Please wait…'
                     : formMode === 'register'
-                    ? 'Register Account'
+                    ? 'Create Account'
                     : 'Sign In'}
                 </span>
                 <ArrowRight className="h-4 w-4" />
@@ -264,16 +229,15 @@ export function LoginPage() {
 
               {/* Mode Switcher */}
               <div className="pt-2 text-center text-xs text-[var(--text-muted)]">
-                {formMode === 'login' && (
+                {formMode === 'login' ? (
                   <button
                     type="button"
                     onClick={() => { setFormMode('register'); setError(''); }}
                     className="hover:text-[var(--text)] hover:underline"
                   >
-                    Need an account? Create one here
+                    Don't have an account? Create one
                   </button>
-                )}
-                {formMode === 'register' && (
+                ) : (
                   <button
                     type="button"
                     onClick={() => { setFormMode('login'); setError(''); }}
@@ -290,11 +254,8 @@ export function LoginPage() {
           {authMethod === 'apikey' && (
             <form onSubmit={handleSubmitApiKey} className="space-y-4">
               <div>
-                <label className="ui-label">Bearer Developer API Key</label>
-                <p className="mb-2 text-[11px] text-[var(--text-muted)]">
-                  Matches <code className="font-mono text-[var(--text)]">API_KEY</code> defined in your server environment.
-                </p>
-                <div className="relative">
+                <label className="ui-label">Developer API Key</label>
+                <div className="relative mt-1">
                   <input
                     type="text"
                     required
@@ -323,11 +284,6 @@ export function LoginPage() {
             </form>
           )}
         </div>
-
-        {/* Footer info */}
-        <p className="text-center text-[11px] text-[var(--text-faint)]">
-          Database User Table Auth · Hashed with scrypt & Salt · 30-Day JWT Session
-        </p>
       </div>
     </div>
   );
