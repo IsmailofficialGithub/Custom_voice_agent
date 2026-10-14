@@ -4,18 +4,15 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/auth-context';
 import companyConfig from '../../config/company.json';
-import { Key, Mail, Lock, User as UserIcon, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Key, Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export function LoginPage() {
   const router = useRouter();
-  const { login, register, loginWithApiKey, apiKey, currentUser, logout } = useAuth();
+  const { login, loginWithApiKey, apiKey, currentUser, logout } = useAuth();
 
   const [authMethod, setAuthMethod] = useState<'password' | 'apikey'>('password');
-  const [formMode, setFormMode] = useState<'login' | 'register'>('login');
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [devKey, setDevKey] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -23,30 +20,8 @@ export function LoginPage() {
   const handleSubmitPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (formMode === 'register') {
-      if (password.length < 6) {
-        setError('Password must be at least 6 characters');
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError('Passwords do not match');
-        return;
-      }
-
-      setBusy(true);
-      try {
-        await register(email, password, name);
-        router.push('/');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Registration failed');
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-
     setBusy(true);
+
     try {
       await login(email, password);
       router.push('/');
@@ -77,7 +52,7 @@ export function LoginPage() {
             {companyConfig.logo}
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">
-            {formMode === 'register' ? 'Create an account' : 'Sign in to your account'}
+            Sign in to your account
           </h1>
           <p className="text-xs text-[var(--text-muted)]">
             {companyConfig.name} · {companyConfig.tagline}
@@ -143,22 +118,6 @@ export function LoginPage() {
           {/* Password Auth Form */}
           {authMethod === 'password' && (
             <form onSubmit={handleSubmitPassword} className="space-y-4">
-              {formMode === 'register' && (
-                <div>
-                  <label className="ui-label">Full Name</label>
-                  <div className="relative mt-1">
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Your name"
-                      className="ui-input pr-8"
-                    />
-                    <UserIcon className="absolute right-2.5 top-2.5 h-4 w-4 text-[var(--text-faint)] pointer-events-none" />
-                  </div>
-                </div>
-              )}
-
               <div>
                 <label className="ui-label">Email</label>
                 <div className="relative mt-1">
@@ -189,23 +148,6 @@ export function LoginPage() {
                 </div>
               </div>
 
-              {formMode === 'register' && (
-                <div>
-                  <label className="ui-label">Confirm Password</label>
-                  <div className="relative mt-1">
-                    <input
-                      type="password"
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="ui-input pr-8"
-                    />
-                    <Lock className="absolute right-2.5 top-2.5 h-4 w-4 text-[var(--text-faint)] pointer-events-none" />
-                  </div>
-                </div>
-              )}
-
               {error && (
                 <div className="rounded-md border border-[var(--danger)]/30 bg-[var(--danger)]/10 p-2.5 text-xs text-[var(--danger)]">
                   {error}
@@ -217,36 +159,9 @@ export function LoginPage() {
                 disabled={busy}
                 className="ui-btn ui-btn-primary w-full flex items-center justify-center gap-2 py-2"
               >
-                <span>
-                  {busy
-                    ? 'Please wait…'
-                    : formMode === 'register'
-                    ? 'Create Account'
-                    : 'Sign In'}
-                </span>
+                <span>{busy ? 'Signing in…' : 'Sign In'}</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
-
-              {/* Mode Switcher */}
-              <div className="pt-2 text-center text-xs text-[var(--text-muted)]">
-                {formMode === 'login' ? (
-                  <button
-                    type="button"
-                    onClick={() => { setFormMode('register'); setError(''); }}
-                    className="hover:text-[var(--text)] hover:underline"
-                  >
-                    Don't have an account? Create one
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => { setFormMode('login'); setError(''); }}
-                    className="hover:text-[var(--text)] hover:underline"
-                  >
-                    Already have an account? Sign in
-                  </button>
-                )}
-              </div>
             </form>
           )}
 
