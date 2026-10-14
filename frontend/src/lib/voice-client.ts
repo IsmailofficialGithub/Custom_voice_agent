@@ -71,14 +71,14 @@ export class VoiceSessionClient {
 
   // VAD — tuned for natural human conversation & echo suppression
   // VAD — adaptive energy tracking & echo suppression
-  private readonly bargeInThreshold = 92;
-  private readonly silenceDurationMs = 1500;
+  private readonly bargeInThreshold = 75;
+  private readonly silenceDurationMs = 1100;
   private readonly minSpeechDurationMs = 250;
   private readonly preRollMs = 600;
   private readonly speechOnsetNeeded = 4;
   private speechOnsetFrames = 0;
   private bargeInFrames = 0;
-  private readonly bargeInOnsetNeeded = 24;
+  private readonly bargeInOnsetNeeded = 6;
   private latestRms = 0;
   private ambientNoiseFloorRms = 0.003;
   private ambientNoiseFloorLevel = 10;
@@ -203,7 +203,7 @@ export class VoiceSessionClient {
     return new Promise((resolve, reject) => {
       try {
         this.updateState('connecting');
-        const url = `${this.wsUrl}?conversationId=${this.conversationId}&apiKey=${encodeURIComponent(this.apiKey)}`;
+        const url = `${this.wsUrl}?conversationId=${this.conversationId}&apiKey=${encodeURIComponent(this.apiKey)}&mode=active`;
         this.ws = new WebSocket(url);
 
         this.ws.onopen = () => this.updateState('connected');
@@ -521,10 +521,9 @@ export class VoiceSessionClient {
         return;
       }
 
-      // Barge-in requires deliberate, intense user speech (RMS > 0.16) for sustained duration (~400ms)
-      // to ensure speaker audio bleed never cuts off assistant speech
+      // Barge-in allows user to interrupt speech when speaking directly
       if (this.currentState === 'speaking' || this.isPlayingQueue) {
-        if (normalized >= this.bargeInThreshold && this.latestRms > 0.16) {
+        if (normalized >= this.bargeInThreshold && this.latestRms > 0.04) {
           this.bargeInFrames += 1;
           if (this.bargeInFrames >= this.bargeInOnsetNeeded) {
             this.bargeInFrames = 0;
@@ -619,10 +618,10 @@ export class VoiceSessionClient {
       return;
     }
 
-    // Dynamic threshold: speech must rise significantly above current ambient noise floor
-    const minRmsThreshold = Math.max(0.012, this.ambientNoiseFloorRms * 2.2);
-    const minLevelThreshold = Math.max(16, this.ambientNoiseFloorLevel + 10);
-    const isAboveThreshold = this.latestRms >= minRmsThreshold && level >= minLevelThreshold;
+    // Dynamic threshold: detects normal speech volume effortlessly
+    const minRmsThreshold = Math.max(0.002, this.ambientNoiseFloorRms * 1.25);
+    const minLevelThreshold = Math.max(10, this.ambientNoiseFloorLevel + 4);
+    const isAboveThreshold = this.latestRms >= minRmsThreshold || level >= minLevelThreshold;
 
     if (isAboveThreshold) {
       if (this.silenceTimer) {
@@ -679,8 +678,8 @@ export class VoiceSessionClient {
     const wavBlob = this.encodeWav24kMono(chunks, sampleRate);
     console.log(`[VoiceClient] Speech finished: duration=${speechDuration}ms, chunks=${chunks.length}, size=${wavBlob.size} bytes, rms=${rms.toFixed(5)}`);
 
-    const minRms = Math.min(0.006, Math.max(0.0015, this.ambientNoiseFloorRms * 1.05));
-    if (wavBlob.size >= 8000 && rms >= minRms) {
+    const minRms = Math.min(0.004, Math.max(0.0008, this.ambientNoiseFloorRms * 1.05));
+    if (wavBlob.size >= 4000 && rms >= minRms) {
       console.log(`[VoiceClient] Valid user speech captured (${wavBlob.size} bytes, rms=${rms.toFixed(5)}). Sending turn...`);
       this.isProcessingTurn = true;
       await this.sendAudioTurn(wavBlob);
@@ -847,7 +846,7 @@ export class VoiceSessionClient {
     }
 
     this.isPlayingQueue = false;
-    this.echoCooldownUntil = Date.now() + 650;
+    this.echoCooldownUntil = Date.now() + 350;
     if (this.endOfResponseReceived && !this.isStaleResponse()) {
       this.resetTurnToListening();
     }
@@ -926,7 +925,7 @@ export class VoiceSessionClient {
   }
 
   private stopCurrentAudio(clearQueue = true) {
-    this.echoCooldownUntil = Date.now() + 650;
+    this.echoCooldownUntil = Date.now() + 350;
     if (clearQueue) {
       this.audioQueue = [];
       this.endOfResponseReceived = false;

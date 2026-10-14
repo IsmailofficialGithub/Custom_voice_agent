@@ -99,13 +99,16 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // fallback to defaults if conversation lookup fails
     }
 
+    const requestedMode = urlParams.get('mode');
+    const initialLifecycle: 'standby' | 'active' = requestedMode === 'active' ? 'active' : 'standby';
+
     const session: VoiceSession = {
       conversationId,
       authenticated: true,
       audioChunks: [],
       abortController: null,
       realtimeWs: null,
-      lifecycleState: 'standby',
+      lifecycleState: initialLifecycle,
       startPhrase,
       endPhrase,
       farewellMessage,
@@ -113,7 +116,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     this.sessions.set(client, session);
     this.logger.log(
-      `Voice session connected: ${conversationId} [standby, start="${startPhrase}", end="${endPhrase}"]`,
+      `Voice session connected: ${conversationId} [${initialLifecycle}, start="${startPhrase}", end="${endPhrase}"]`,
     );
 
     // If Realtime engine feature flag is active, initialize OpenAI Realtime connection
@@ -135,17 +138,17 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       type: 'connected',
       conversationId,
       engine: voiceEngine,
-      lifecycleState: 'standby',
+      lifecycleState: initialLifecycle,
       startPhrase,
       endPhrase,
     });
     this.send(client, {
       type: 'lifecycle_change',
-      state: 'standby',
+      state: initialLifecycle,
       startPhrase,
       endPhrase,
     });
-    this.send(client, { type: 'status', status: 'standby' });
+    this.send(client, { type: 'status', status: initialLifecycle === 'active' ? 'listening' : 'standby' });
   }
 
   handleDisconnect(client: WsClient) {
@@ -535,6 +538,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
           onToken: (token: string) => {
             if (abortController.signal.aborted) return;
             cumulativeText += token;
+            this.send(client, { type: 'response_text_chunk', text: cumulativeText });
           },
           onSentence: async (sentence) => {
             if (abortController.signal.aborted) return;
@@ -746,6 +750,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
           onToken: (token: string) => {
             if (abortController.signal.aborted) return;
             cumulativeText += token;
+            this.send(client, { type: 'response_text_chunk', text: cumulativeText });
           },
           onSentence: async (sentence) => {
             if (abortController.signal.aborted) return;
