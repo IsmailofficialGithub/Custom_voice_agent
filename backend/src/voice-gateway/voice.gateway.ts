@@ -69,8 +69,9 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const match = url.match(/\/api\/v1\/voice\/([^?]+)/);
     const conversationId = urlParams.get('conversationId') ?? match?.[1];
 
-    const token = String(urlParams.get('apiKey') ?? req.headers['x-api-key'] ?? '');
+    const token = String(urlParams.get('apiKey') ?? req.headers['x-api-key'] ?? req.headers['authorization'] ?? '');
     if (!this.authService.isValidBearer(token) || !conversationId) {
+      this.logger.warn(`WS rejected: conversationId="${conversationId}", tokenPresent=${Boolean(token)}`);
       this.send(client, { type: 'error', message: 'Unauthorized or missing conversation ID' });
       client.close(1008, 'Unauthorized');
       return;

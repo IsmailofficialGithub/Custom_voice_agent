@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { VoiceSessionClient, VoiceState } from '../../lib/voice-client';
+import { getWsUrl } from '../../lib/ws-url';
 import { apiClient, Message } from '../../lib/api-client';
 import {
   Mic,
@@ -140,7 +141,7 @@ export function ChatWorkspace({ conversationId, apiKey, agentName, onError, onCl
 
     const boot = async () => {
       try {
-        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3002/api/v1/voice';
+        const wsUrl = getWsUrl();
         client = new VoiceSessionClient(
           conversationId,
           apiKey,

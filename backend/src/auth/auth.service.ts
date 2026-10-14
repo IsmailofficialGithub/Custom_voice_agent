@@ -204,19 +204,21 @@ export class AuthService {
   }
 
   isSessionToken(token: string): boolean {
+    const clean = (token ?? '').trim().replace(/^Bearer\s+/i, '');
+    if (!clean) return false;
     try {
-      const payload = this.jwt.verify<{ typ?: string }>(token, { secret: this.jwtSecret() });
-      return payload?.typ === 'session';
+      const payload = this.jwt.verify<{ typ?: string; sub?: string }>(clean, { secret: this.jwtSecret() });
+      return payload?.typ === 'session' || Boolean(payload?.sub);
     } catch {
       return false;
     }
   }
 
   isValidBearer(token: string): boolean {
-    const t = (token ?? '').trim();
+    const t = (token ?? '').trim().replace(/^Bearer\s+/i, '');
     if (!t) return false;
     const key = this.apiKey();
-    if (key && t === key) return true;
+    if (key && (t === key || token.trim() === key)) return true;
     return this.isSessionToken(t);
   }
 

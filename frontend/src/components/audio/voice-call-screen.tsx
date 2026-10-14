@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { VoiceSessionClient, VoiceState } from '../../lib/voice-client';
+import { getWsUrl } from '../../lib/ws-url';
 import { apiClient, Message } from '../../lib/api-client';
 import { Mic, MicOff, PhoneOff, Square, Send, Volume2, MessageSquare, X } from 'lucide-react';
 
@@ -111,7 +112,7 @@ export function VoiceCallScreen({
 
     const initClient = async () => {
       try {
-        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3002/api/v1/voice';
+        const wsUrl = getWsUrl();
         client = new VoiceSessionClient(
           conversationId,
           apiKey,

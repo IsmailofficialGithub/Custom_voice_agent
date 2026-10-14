@@ -2,6 +2,8 @@
 // Continuous PCM capture (pre-roll + speech window) → 16kHz WAV for Whisper
 // Fast endpointing for lower turn latency
 
+import { getWsUrl } from './ws-url';
+
 export type VoiceState =
   | 'idle'
   | 'standby'
@@ -95,7 +97,7 @@ export class VoiceSessionClient {
     private readonly conversationId: string,
     private readonly apiKey: string,
     private readonly handlers: VoiceEventHandlers,
-    private readonly wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3002/api/v1/voice',
+    private readonly wsUrl = getWsUrl(),
   ) {}
 
   public get state(): VoiceState {
