@@ -28,6 +28,7 @@ interface AuthContextType {
   setApiKey: (key: string) => void;
   switchUser: (userId: string) => void;
   login: (email: string, password: string) => Promise<boolean>;
+  register: (email: string, password: string, name?: string) => Promise<boolean>;
   loginWithApiKey: (key: string) => boolean;
   logout: () => void;
   hasPermission: (permission: string) => boolean;
@@ -84,14 +85,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const register = async (email: string, password: string, name?: string): Promise<boolean> => {
+    const res = await apiClient.register({ email, password, name });
+    setApiKey(res.token);
+    const user: UserProfile = {
+      id: res.user?.id || 'user',
+      name: res.user?.name || name || email.split('@')[0],
+      email: res.user?.email || res.email,
+      role: res.user?.role || 'admin',
+      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(res.email)}`,
+    };
+    setCurrentUser(user);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('axiomra_user', JSON.stringify(user));
+    }
+    return true;
+  };
+
   const login = async (email: string, password: string): Promise<boolean> => {
     const res = await apiClient.login(email, password);
     setApiKey(res.token);
     const user: UserProfile = {
-      id: 'env-user',
-      name: email.split('@')[0],
-      email: res.email,
-      role: 'admin',
+      id: res.user?.id || 'user',
+      name: res.user?.name || email.split('@')[0],
+      email: res.user?.email || res.email,
+      role: res.user?.role || 'admin',
       avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(res.email)}`,
     };
     setCurrentUser(user);
@@ -147,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setApiKey,
         switchUser,
         login,
+        register,
         loginWithApiKey,
         logout,
         hasPermission,

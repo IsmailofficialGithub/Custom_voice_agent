@@ -1,31 +1,75 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/auth-context';
+import { apiClient } from '../../lib/api-client';
 import companyConfig from '../../config/company.json';
-import { Key, Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Key, Mail, Lock, User as UserIcon, ArrowRight, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
 
 export function LoginPage() {
   const router = useRouter();
-  const { login, loginWithApiKey, apiKey, currentUser, logout } = useAuth();
+  const { login, register, loginWithApiKey, apiKey, currentUser, logout } = useAuth();
 
   const [authMethod, setAuthMethod] = useState<'password' | 'apikey'>('password');
+  const [formMode, setFormMode] = useState<'login' | 'setup' | 'register'>('login');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [devKey, setDevKey] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [setupChecked, setSetupChecked] = useState(false);
+
+  useEffect(() => {
+    apiClient
+      .getSetupStatus()
+      .then((status) => {
+        if (!status.isSetup) {
+          setFormMode('setup');
+        } else {
+          setFormMode('login');
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        setSetupChecked(true);
+      });
+  }, []);
 
   const handleSubmitPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (formMode === 'setup' || formMode === 'register') {
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+        return;
+      }
+
+      setBusy(true);
+      try {
+        await register(email, password, name);
+        router.push('/');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Registration failed');
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     setBusy(true);
     try {
       await login(email, password);
       router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid credentials. Check server environment.');
+      setError(err instanceof Error ? err.message : 'Invalid email or password');
     } finally {
       setBusy(false);
     }
@@ -86,6 +130,19 @@ export function LoginPage() {
             </div>
           )}
 
+          {/* First time setup banner */}
+          {formMode === 'setup' && (
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 text-xs text-emerald-300 space-y-1">
+              <div className="flex items-center gap-2 font-semibold text-emerald-400">
+                <Sparkles className="h-4 w-4 text-emerald-400" />
+                <span>First-Time Setup · Create Database Password</span>
+              </div>
+              <p className="text-[11px] text-emerald-300/80">
+                Welcome! Create your master password. It will be stored securely as a hashed record in the database.
+              </p>
+            </div>
+          )}
+
           {/* Method selector tabs */}
           <div className="grid grid-cols-2 gap-1 rounded-lg border border-[var(--border)] bg-[var(--bg)] p-1 text-xs font-medium">
             <button
@@ -117,6 +174,22 @@ export function LoginPage() {
           {/* Password Auth Form */}
           {authMethod === 'password' && (
             <form onSubmit={handleSubmitPassword} className="space-y-4">
+              {(formMode === 'setup' || formMode === 'register') && (
+                <div>
+                  <label className="ui-label">Your Name</label>
+                  <div className="relative mt-1">
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Admin"
+                      className="ui-input pr-8"
+                    />
+                    <UserIcon className="absolute right-2.5 top-2.5 h-4 w-4 text-[var(--text-faint)] pointer-events-none" />
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="ui-label">Email address</label>
                 <div className="relative mt-1">
@@ -133,7 +206,9 @@ export function LoginPage() {
               </div>
 
               <div>
-                <label className="ui-label">Password</label>
+                <label className="ui-label">
+                  {formMode === 'setup' ? 'Create Password' : 'Password'}
+                </label>
                 <div className="relative mt-1">
                   <input
                     type="password"
@@ -147,6 +222,23 @@ export function LoginPage() {
                 </div>
               </div>
 
+              {(formMode === 'setup' || formMode === 'register') && (
+                <div>
+                  <label className="ui-label">Confirm Password</label>
+                  <div className="relative mt-1">
+                    <input
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="ui-input pr-8"
+                    />
+                    <CheckCircle2 className="absolute right-2.5 top-2.5 h-4 w-4 text-[var(--text-faint)] pointer-events-none" />
+                  </div>
+                </div>
+              )}
+
               {error && (
                 <div className="rounded-md border border-[var(--danger)]/30 bg-[var(--danger)]/10 p-2.5 text-xs text-[var(--danger)]">
                   {error}
@@ -158,9 +250,39 @@ export function LoginPage() {
                 disabled={busy}
                 className="ui-btn ui-btn-primary w-full flex items-center justify-center gap-2 py-2"
               >
-                <span>{busy ? 'Authenticating…' : 'Sign In'}</span>
+                <span>
+                  {busy
+                    ? 'Processing…'
+                    : formMode === 'setup'
+                    ? 'Create Database Account & Sign In'
+                    : formMode === 'register'
+                    ? 'Register Account'
+                    : 'Sign In'}
+                </span>
                 <ArrowRight className="h-4 w-4" />
               </button>
+
+              {/* Mode Switcher */}
+              <div className="pt-2 text-center text-xs text-[var(--text-muted)]">
+                {formMode === 'login' && (
+                  <button
+                    type="button"
+                    onClick={() => { setFormMode('register'); setError(''); }}
+                    className="hover:text-[var(--text)] hover:underline"
+                  >
+                    Need an account? Create one here
+                  </button>
+                )}
+                {formMode === 'register' && (
+                  <button
+                    type="button"
+                    onClick={() => { setFormMode('login'); setError(''); }}
+                    className="hover:text-[var(--text)] hover:underline"
+                  >
+                    Already have an account? Sign in
+                  </button>
+                )}
+              </div>
             </form>
           )}
 
@@ -204,7 +326,7 @@ export function LoginPage() {
 
         {/* Footer info */}
         <p className="text-center text-[11px] text-[var(--text-faint)]">
-          Protected by NestJS API Guard & JWT Session Authentication
+          Database User Table Auth · Hashed with scrypt & Salt · 30-Day JWT Session
         </p>
       </div>
     </div>
