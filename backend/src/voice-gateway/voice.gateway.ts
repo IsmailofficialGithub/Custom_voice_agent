@@ -314,13 +314,15 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
             if (!session.realtimeWs || session.realtimeWs.readyState === WebSocket.CLOSED) {
               this.initRealtimeSession(client, session);
             }
-            session.realtimeTurnStart = Date.now();
-            session.realtimeAudioSeen = false;
-            session.realtimeTranscript = '';
-            session.realtimeResponseActive = true;
-            this.send(client, { type: 'status', status: 'thinking' });
-            this.sendRealtimeEvent(session, { type: 'input_audio_buffer.commit' });
-            this.sendRealtimeEvent(session, { type: 'response.create' });
+            if (!session.realtimeResponseActive) {
+              session.realtimeTurnStart = Date.now();
+              session.realtimeAudioSeen = false;
+              session.realtimeTranscript = '';
+              session.realtimeResponseActive = true;
+              this.send(client, { type: 'status', status: 'thinking' });
+              this.sendRealtimeEvent(session, { type: 'input_audio_buffer.commit' });
+              this.sendRealtimeEvent(session, { type: 'response.create' });
+            }
             return;
           }
 
@@ -894,16 +896,25 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 - Keep responses short: 1-2 concise spoken sentences.`;
         instructions += multilingualDirective;
 
+        const serverVadConfig = {
+          type: 'server_vad',
+          threshold: 0.5,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 500,
+          create_response: true,
+        };
+
         // Configure session using OpenAI Realtime GA schema
         const sessionUpdate = {
           type: 'session.update',
           session: {
             type: 'realtime',
             instructions,
+            turn_detection: serverVadConfig,
             audio: {
               input: {
                 format: { type: 'audio/pcm', rate: 24000 },
-                turn_detection: null,
+                turn_detection: serverVadConfig,
                 transcription: {
                   model: 'whisper-1',
                   prompt: 'Conversational dialogue verbatim in English, Punjabi, Saraiki, Urdu, and Roman Urdu.',
@@ -958,8 +969,16 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       case 'input_audio_buffer.speech_started':
         // Realtime server VAD detected barge-in
         this.logger.log(`Realtime VAD detected speech_started (barge-in)`);
+        session.realtimeAudioSeen = false;
+        session.realtimeResponseActive = false;
         this.send(client, { type: 'interrupt' });
         this.send(client, { type: 'status', status: 'user_speaking' });
+        break;
+
+      case 'input_audio_buffer.speech_stopped':
+        this.logger.log(`Realtime VAD detected speech_stopped (turn ended)`);
+        session.realtimeTurnStart = Date.now();
+        this.send(client, { type: 'status', status: 'thinking' });
         break;
 
       case 'response.output_audio.delta':

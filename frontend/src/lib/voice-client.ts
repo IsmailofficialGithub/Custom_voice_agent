@@ -93,6 +93,7 @@ export class VoiceSessionClient {
   private lifecycleState: 'standby' | 'active' | 'ending' = 'standby';
   private startPhrase = 'hey boss';
   private endPhrase = 'goodbye';
+  private engine = 'realtime';
 
   constructor(
     private readonly conversationId: string,
@@ -256,6 +257,9 @@ export class VoiceSessionClient {
   ) {
     switch (msg.type) {
       case 'connected':
+        if ((msg as any).engine) {
+          this.engine = (msg as any).engine;
+        }
         if (msg.lifecycleState) {
           this.lifecycleState = msg.lifecycleState;
         }
@@ -447,6 +451,20 @@ export class VoiceSessionClient {
       }
       this.latestRms = Math.sqrt(sumSq / (input.length / step));
 
+      // In Realtime mode, stream live PCM chunks directly to the backend for OpenAI Server VAD
+      if (this.engine === 'realtime' && this.ws && this.ws.readyState === WebSocket.OPEN) {
+        const isEchoCooldown = Date.now() < this.echoCooldownUntil;
+        if (!this.isPlayingQueue && this.currentState !== 'speaking' && !isEchoCooldown) {
+          const sampleRate = this.audioContext?.sampleRate || 24000;
+          const samples = sampleRate === 24000 ? copy : this.resampleLinear(copy, sampleRate, 24000);
+          const pcmBase64 = this.floatToPcmBase64(samples);
+          if (pcmBase64) {
+            this.ws.send(JSON.stringify({ event: 'message', data: { type: 'audio_chunk', data: pcmBase64 } }));
+          }
+        }
+        return;
+      }
+
       // If we are actively capturing speech, NEVER discard audio frames!
       if (this.isCapturing) {
         this.captureChunks.push(copy);
@@ -613,6 +631,10 @@ export class VoiceSessionClient {
   }
 
   private processVADLevel(level: number) {
+    if (this.engine === 'realtime') {
+      return;
+    }
+
     if (this.isPlayingQueue || this.currentState === 'speaking' || Date.now() < this.echoCooldownUntil || Date.now() < this.startupGraceUntil) {
       return;
     }
@@ -781,6 +803,23 @@ export class VoiceSessionClient {
       output[i] = input[i0] * (1 - t) + input[i1] * t;
     }
     return output;
+  }
+
+  private floatToPcmBase64(floats: Float32Array): string {
+    const len = floats.length;
+    const buffer = new ArrayBuffer(len * 2);
+    const view = new DataView(buffer);
+    for (let i = 0; i < len; i++) {
+      const s = Math.max(-1, Math.min(1, floats[i]));
+      view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)));
+    }
+    return btoa(binary);
   }
 
   private async sendAudioTurn(blob: Blob) {
