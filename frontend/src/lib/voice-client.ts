@@ -71,16 +71,17 @@ export class VoiceSessionClient {
   private preRollSamples = 0;
   private captureSamples = 0;
 
-  // VAD — tuned for natural human conversation & echo suppression
-  // VAD — adaptive energy tracking & echo suppression
-  private readonly bargeInThreshold = 75;
-  private readonly silenceDurationMs = 1100;
-  private readonly minSpeechDurationMs = 250;
-  private readonly preRollMs = 600;
-  private readonly speechOnsetNeeded = 4;
+  // VAD — tuned for fast conversational turn-taking & robust background noise rejection
+  private readonly bargeInThreshold = 88;
+  private readonly bargeInRmsThreshold = 0.075;
+  private readonly bargeInOnsetNeeded = 16;
+  private readonly silenceDurationMs = 550;
+  private readonly minSpeechDurationMs = 300;
+  private readonly maxSpeechDurationMs = 8000;
+  private readonly preRollMs = 500;
+  private readonly speechOnsetNeeded = 3;
   private speechOnsetFrames = 0;
   private bargeInFrames = 0;
-  private readonly bargeInOnsetNeeded = 6;
   private latestRms = 0;
   private ambientNoiseFloorRms = 0.003;
   private ambientNoiseFloorLevel = 10;
@@ -523,9 +524,9 @@ export class VoiceSessionClient {
         return;
       }
 
-      // Barge-in allows user to interrupt speech when speaking directly
+      // Barge-in allows user to deliberately interrupt assistant speech with sustained loud voice
       if (this.currentState === 'speaking' || this.isPlayingQueue) {
-        if (normalized >= this.bargeInThreshold && this.latestRms > 0.04) {
+        if (normalized >= this.bargeInThreshold && this.latestRms >= this.bargeInRmsThreshold) {
           this.bargeInFrames += 1;
           if (this.bargeInFrames >= this.bargeInOnsetNeeded) {
             this.bargeInFrames = 0;
@@ -620,10 +621,24 @@ export class VoiceSessionClient {
       return;
     }
 
-    // Dynamic threshold: detects normal speech volume effortlessly
-    const minRmsThreshold = Math.max(0.002, this.ambientNoiseFloorRms * 1.25);
-    const minLevelThreshold = Math.max(10, this.ambientNoiseFloorLevel + 4);
-    const isAboveThreshold = this.latestRms >= minRmsThreshold || level >= minLevelThreshold;
+    // Require both genuine vocal RMS energy and speech-band frequency level clearly above ambient noise
+    const minRmsThreshold = Math.max(0.008, this.ambientNoiseFloorRms * 1.8);
+    const minLevelThreshold = Math.max(20, this.ambientNoiseFloorLevel + 8);
+    const isAboveThreshold = this.latestRms >= minRmsThreshold && level >= minLevelThreshold;
+
+    // Maximum turn duration safeguard: finalize immediately instead of listening indefinitely
+    if (this.currentState === 'user_speaking') {
+      const elapsed = Date.now() - this.speechStartTime;
+      if (elapsed >= this.maxSpeechDurationMs) {
+        console.log(`[VoiceClient] Max turn duration reached (${elapsed}ms). Finalizing turn.`);
+        if (this.silenceTimer) {
+          clearTimeout(this.silenceTimer);
+          this.silenceTimer = null;
+        }
+        void this.handleSilenceTimeout();
+        return;
+      }
+    }
 
     if (isAboveThreshold) {
       if (this.silenceTimer) {
@@ -632,7 +647,7 @@ export class VoiceSessionClient {
       }
 
       // Hysteresis leaky integrator
-      this.speechOnsetFrames = Math.min(10, this.speechOnsetFrames + 2);
+      this.speechOnsetFrames = Math.min(8, this.speechOnsetFrames + 2);
 
       if (this.currentState !== 'user_speaking') {
         if (this.speechOnsetFrames < this.speechOnsetNeeded) return;
@@ -680,8 +695,8 @@ export class VoiceSessionClient {
     const wavBlob = this.encodeWav24kMono(chunks, sampleRate);
     console.log(`[VoiceClient] Speech finished: duration=${speechDuration}ms, chunks=${chunks.length}, size=${wavBlob.size} bytes, rms=${rms.toFixed(5)}`);
 
-    const minRms = Math.min(0.004, Math.max(0.0008, this.ambientNoiseFloorRms * 1.05));
-    if (wavBlob.size >= 4000 && rms >= minRms) {
+    const minRms = Math.min(0.005, Math.max(0.0012, this.ambientNoiseFloorRms * 1.15));
+    if (wavBlob.size >= 8000 && rms >= minRms) {
       console.log(`[VoiceClient] Valid user speech captured (${wavBlob.size} bytes, rms=${rms.toFixed(5)}). Sending turn...`);
       this.isProcessingTurn = true;
       await this.sendAudioTurn(wavBlob);
@@ -848,7 +863,7 @@ export class VoiceSessionClient {
     }
 
     this.isPlayingQueue = false;
-    this.echoCooldownUntil = Date.now() + 350;
+    this.echoCooldownUntil = Date.now() + 500;
     if (this.endOfResponseReceived && !this.isStaleResponse()) {
       this.resetTurnToListening();
     }
