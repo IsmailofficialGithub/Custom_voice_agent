@@ -451,20 +451,6 @@ export class VoiceSessionClient {
       }
       this.latestRms = Math.sqrt(sumSq / (input.length / step));
 
-      // In Realtime mode, stream live PCM chunks directly to the backend for OpenAI Server VAD
-      if (this.engine === 'realtime' && this.ws && this.ws.readyState === WebSocket.OPEN) {
-        const isEchoCooldown = Date.now() < this.echoCooldownUntil;
-        if (!this.isPlayingQueue && this.currentState !== 'speaking' && !isEchoCooldown) {
-          const sampleRate = this.audioContext?.sampleRate || 24000;
-          const samples = sampleRate === 24000 ? copy : this.resampleLinear(copy, sampleRate, 24000);
-          const pcmBase64 = this.floatToPcmBase64(samples);
-          if (pcmBase64) {
-            this.ws.send(JSON.stringify({ event: 'message', data: { type: 'audio_chunk', data: pcmBase64 } }));
-          }
-        }
-        return;
-      }
-
       // If we are actively capturing speech, NEVER discard audio frames!
       if (this.isCapturing) {
         this.captureChunks.push(copy);
@@ -631,10 +617,6 @@ export class VoiceSessionClient {
   }
 
   private processVADLevel(level: number) {
-    if (this.engine === 'realtime') {
-      return;
-    }
-
     if (this.isPlayingQueue || this.currentState === 'speaking' || Date.now() < this.echoCooldownUntil || Date.now() < this.startupGraceUntil) {
       return;
     }

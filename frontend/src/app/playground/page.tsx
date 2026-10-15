@@ -311,10 +311,15 @@ function PlaygroundContent() {
     loadAgents();
   }, [apiKey]);
 
+  const prevAgentIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (selectedAgentId) {
+      if (prevAgentIdRef.current !== null && prevAgentIdRef.current !== selectedAgentId) {
+        setActiveConversation(null);
+      }
+      prevAgentIdRef.current = selectedAgentId;
       loadConversations(selectedAgentId);
-      setActiveConversation(null);
     } else {
       setConversations([]);
     }
@@ -334,9 +339,12 @@ function PlaygroundContent() {
   const loadConversations = async (agentId: string) => {
     try {
       setLoadingChats(true);
-      setConversations(await apiClient.getConversations(agentId, apiKey));
+      const convs = await apiClient.getConversations(agentId, apiKey);
+      setConversations(convs);
+      return convs;
     } catch (err) {
       showError(err, 'Load Chats');
+      return [];
     } finally {
       setLoadingChats(false);
     }
@@ -380,11 +388,28 @@ function PlaygroundContent() {
   };
 
   useEffect(() => {
-    if (startCallParam && selectedAgentId && agents.length > 0 && !autoStartedRef.current && !activeConversation) {
-      autoStartedRef.current = true;
-      startCallDirectly(selectedAgentId);
+    if (!startCallParam || !selectedAgentId || agents.length === 0 || !apiKey || autoStartedRef.current) {
+      return;
     }
-  }, [startCallParam, selectedAgentId, agents]);
+    autoStartedRef.current = true;
+
+    const resumeOrCreateCall = async () => {
+      try {
+        const convs = await apiClient.getConversations(selectedAgentId, apiKey);
+        setConversations(convs);
+        const ongoing = convs.find((c) => !c.endedAt);
+        if (ongoing) {
+          setActiveConversation(ongoing);
+          return;
+        }
+      } catch {
+        // Fall back to creating a new call
+      }
+      startCallDirectly(selectedAgentId);
+    };
+
+    resumeOrCreateCall();
+  }, [startCallParam, selectedAgentId, agents, apiKey]);
 
   const openNewChatModal = () => {
     if (!selectedAgentId) {

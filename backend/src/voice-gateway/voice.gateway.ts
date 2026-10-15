@@ -896,25 +896,17 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 - Keep responses short: 1-2 concise spoken sentences.`;
         instructions += multilingualDirective;
 
-        const serverVadConfig = {
-          type: 'server_vad',
-          threshold: 0.5,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 500,
-          create_response: true,
-        };
-
-        // Configure session using OpenAI Realtime GA schema
+        // Configure session using OpenAI Realtime GA schema with manual turn commits
         const sessionUpdate = {
           type: 'session.update',
           session: {
             type: 'realtime',
             instructions,
-            turn_detection: serverVadConfig,
+            turn_detection: null,
             audio: {
               input: {
                 format: { type: 'audio/pcm', rate: 24000 },
-                turn_detection: serverVadConfig,
+                turn_detection: null,
                 transcription: {
                   model: 'whisper-1',
                   prompt: 'Conversational dialogue verbatim in English, Punjabi, Saraiki, Urdu, and Roman Urdu.',
