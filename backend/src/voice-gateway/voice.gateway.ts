@@ -899,7 +899,6 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
           session: {
             type: 'realtime',
             instructions,
-            turn_detection: null,
             audio: {
               input: {
                 format: { type: 'audio/pcm', rate: 24000 },
