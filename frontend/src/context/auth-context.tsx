@@ -52,26 +52,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<UserProfile>(GUEST_USER);
 
   useEffect(() => {
-    const savedKey = (localStorage.getItem(SESSION_KEY) || '').trim();
-    if (savedKey && savedKey !== 'dev-secret-key-change-me') {
-      setApiKeyState(savedKey);
-    } else if (savedKey === 'dev-secret-key-change-me') {
+    // Clear legacy persistent localStorage credentials
+    if (typeof window !== 'undefined') {
       localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem('axiomra_user');
     }
-    const saved = localStorage.getItem('axiomra_user');
-    if (saved) {
-      try {
-        setCurrentUser(JSON.parse(saved));
-      } catch {}
+
+    const savedKey = (typeof window !== 'undefined' ? sessionStorage.getItem(SESSION_KEY) || '' : '').trim();
+
+    if (!savedKey || savedKey === 'dev-secret-key-change-me') {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem(SESSION_KEY);
+        sessionStorage.removeItem('axiomra_user');
+        document.cookie = `${SESSION_KEY}=; path=/; max-age=0; SameSite=Lax`;
+      }
+      setApiKeyState('');
+      setCurrentUser(GUEST_USER);
+      setReady(true);
+      return;
     }
-    setReady(true);
+
+    // Verify token validity and expiration against backend
+    apiClient
+      .getMe(savedKey)
+      .then((res) => {
+        const user: UserProfile = {
+          id: res.id || 'user',
+          name: res.name || res.email?.split('@')[0] || 'User',
+          email: res.email || '',
+          role: res.role || 'admin',
+          avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(res.email || 'User')}`,
+        };
+        setCurrentUser(user);
+        setApiKeyState(savedKey);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('axiomra_user', JSON.stringify(user));
+        }
+      })
+      .catch(() => {
+        // Token is expired or invalid -> clear and force re-login
+        setApiKeyState('');
+        setCurrentUser(GUEST_USER);
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem(SESSION_KEY);
+          sessionStorage.removeItem('axiomra_user');
+          document.cookie = `${SESSION_KEY}=; path=/; max-age=0; SameSite=Lax`;
+        }
+      })
+      .finally(() => {
+        setReady(true);
+      });
   }, []);
 
   const setApiKey = (key: string) => {
     setApiKeyState(key);
     if (typeof window !== 'undefined') {
-      if (key) localStorage.setItem(SESSION_KEY, key);
-      else localStorage.removeItem(SESSION_KEY);
+      if (key) {
+        sessionStorage.setItem(SESSION_KEY, key);
+        document.cookie = `${SESSION_KEY}=${encodeURIComponent(key)}; path=/; SameSite=Lax`;
+      } else {
+        sessionStorage.removeItem(SESSION_KEY);
+        document.cookie = `${SESSION_KEY}=; path=/; max-age=0; SameSite=Lax`;
+      }
     }
   };
 
@@ -80,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (found) {
       setCurrentUser(found as UserProfile);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('axiomra_user', JSON.stringify(found));
+        sessionStorage.setItem('axiomra_user', JSON.stringify(found));
       }
     }
   };
@@ -97,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setCurrentUser(user);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('axiomra_user', JSON.stringify(user));
+      sessionStorage.setItem('axiomra_user', JSON.stringify(user));
     }
     return true;
   };
@@ -114,7 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setCurrentUser(user);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('axiomra_user', JSON.stringify(user));
+      sessionStorage.setItem('axiomra_user', JSON.stringify(user));
     }
     return true;
   };
@@ -132,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setCurrentUser(user);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('axiomra_user', JSON.stringify(user));
+      sessionStorage.setItem('axiomra_user', JSON.stringify(user));
     }
     return true;
   };
@@ -141,8 +183,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setApiKey('');
     setCurrentUser(GUEST_USER);
     if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('axiomra_user');
+      sessionStorage.removeItem(SESSION_KEY);
       localStorage.removeItem('axiomra_user');
       localStorage.removeItem(SESSION_KEY);
+      document.cookie = `${SESSION_KEY}=; path=/; max-age=0; SameSite=Lax`;
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
   };
 

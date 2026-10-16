@@ -86,6 +86,16 @@ async function fetchWithAuth<T>(path: string, options: RequestInit = {}, apiKey:
   const response = await fetch(url, { ...options, headers });
 
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== 'undefined') {
+      sessionStorage.removeItem('axiomra_session');
+      sessionStorage.removeItem('axiomra_user');
+      localStorage.removeItem('axiomra_session');
+      localStorage.removeItem('axiomra_user');
+      document.cookie = 'axiomra_session=; path=/; max-age=0; SameSite=Lax';
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
     const errorData = await response.json().catch(() => ({ message: response.statusText }));
     const errorObj = new Error(errorData.message || `HTTP error ${response.status}`);
     (errorObj as unknown as { status: number }).status = response.status;
@@ -97,6 +107,9 @@ async function fetchWithAuth<T>(path: string, options: RequestInit = {}, apiKey:
 }
 
 export const apiClient = {
+  getMe: (apiKey: string) =>
+    fetchWithAuth<{ id: string; email: string; name: string; role: string }>('/auth/me', {}, apiKey),
+
   getSetupStatus: () =>
     fetch(`${BASE_URL}/auth/setup-status`).then((res) => res.json() as Promise<{ isSetup: boolean; userCount: number }>),
 
