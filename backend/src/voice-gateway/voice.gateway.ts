@@ -862,6 +862,12 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
               instructions += `\n\nSpecific context for this conversation: ${conv.contextPrompt}`;
             }
           }
+          if (conv?.agent?.id) {
+            const docKnowledge = await this.conversations.getAgentKnowledge(conv.agent.id);
+            if (docKnowledge) {
+              instructions += docKnowledge;
+            }
+          }
           const rawVoice = (conv?.ttsVoice || conv?.agent?.ttsVoice || 'alloy').toLowerCase();
           const voiceMap: Record<string, string> = {
             alloy: 'alloy',

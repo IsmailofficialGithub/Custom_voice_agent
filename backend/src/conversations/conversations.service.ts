@@ -397,4 +397,38 @@ Output JSON format:
       data: { conversationId, role, content, toolName },
     });
   }
+
+  async getAgentKnowledge(agentId: string): Promise<string> {
+    try {
+      const chunks = await this.prisma.documentChunk.findMany({
+        where: {
+          document: {
+            agentId,
+            status: 'ready',
+          },
+        },
+        orderBy: [
+          { documentId: 'asc' },
+          { chunkIndex: 'asc' },
+        ],
+        select: {
+          content: true,
+          document: {
+            select: { filename: true },
+          },
+        },
+        take: 40,
+      });
+
+      if (!chunks || chunks.length === 0) return '';
+
+      let knowledge = '\n\n### Uploaded Knowledge Base Documents:\nYou have access to the following reference documents for this agent. When the user asks about them or related topics, answer accurately using this information:\n';
+      for (const c of chunks) {
+        knowledge += `\n[Document: "${c.document.filename}"]:\n${c.content}\n`;
+      }
+      return knowledge;
+    } catch {
+      return '';
+    }
+  }
 }
