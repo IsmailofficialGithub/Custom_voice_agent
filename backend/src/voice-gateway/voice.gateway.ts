@@ -996,7 +996,6 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.send(client, { type: 'status', status: 'thinking' });
         break;
 
-      case 'response.output_audio.delta':
       case 'response.function_call_arguments.done':
         if (event.name === 'read_webpage') {
           try {
@@ -1039,6 +1038,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
         break;
 
+      case 'response.output_audio.delta':
       case 'response.audio.delta':
         if (session.lifecycleState === 'ending') {
           return;
