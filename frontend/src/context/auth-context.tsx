@@ -17,6 +17,7 @@ export interface UserProfile {
   email: string;
   role: string;
   avatar: string;
+  isTwoFactorEnabled?: boolean;
 }
 
 interface AuthContextType {
@@ -27,10 +28,11 @@ interface AuthContextType {
   ready: boolean;
   setApiKey: (key: string) => void;
   switchUser: (userId: string) => void;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string, twoFactorCode?: string) => Promise<{ requiresTwoFactor?: boolean; success: boolean }>;
   register: (email: string, password: string, name?: string) => Promise<boolean>;
   loginWithApiKey: (key: string) => boolean;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
 }
 
@@ -82,6 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: res.email || '',
           role: res.role || 'admin',
           avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(res.email || 'User')}`,
+          isTwoFactorEnabled: Boolean(res.isTwoFactorEnabled),
         };
         setCurrentUser(user);
         setApiKeyState(savedKey);
@@ -103,6 +106,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setReady(true);
       });
   }, []);
+
+  const refreshUser = async () => {
+    const key = (typeof window !== 'undefined' ? sessionStorage.getItem(SESSION_KEY) || '' : '').trim() || apiKey;
+    if (!key) return;
+    try {
+      const res = await apiClient.getMe(key);
+      const user: UserProfile = {
+        id: res.id || 'user',
+        name: res.name || res.email?.split('@')[0] || 'User',
+        email: res.email || '',
+        role: res.role || 'admin',
+        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(res.email || 'User')}`,
+        isTwoFactorEnabled: Boolean(res.isTwoFactorEnabled),
+      };
+      setCurrentUser(user);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('axiomra_user', JSON.stringify(user));
+      }
+    } catch {}
+  };
 
   const setApiKey = (key: string) => {
     setApiKeyState(key);
@@ -136,6 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: res.user?.email || res.email,
       role: res.user?.role || 'admin',
       avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(res.email)}`,
+      isTwoFactorEnabled: false,
     };
     setCurrentUser(user);
     if (typeof window !== 'undefined') {
@@ -144,21 +168,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    const res = await apiClient.login(email, password);
-    setApiKey(res.token);
-    const user: UserProfile = {
-      id: res.user?.id || 'user',
-      name: res.user?.name || email.split('@')[0],
-      email: res.user?.email || res.email,
-      role: res.user?.role || 'admin',
-      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(res.email)}`,
-    };
-    setCurrentUser(user);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('axiomra_user', JSON.stringify(user));
+  const login = async (email: string, password: string, twoFactorCode?: string): Promise<{ requiresTwoFactor?: boolean; success: boolean }> => {
+    const res = await apiClient.login(email, password, twoFactorCode);
+    if (res.requiresTwoFactor) {
+      return { requiresTwoFactor: true, success: false };
     }
-    return true;
+    if (res.token) {
+      setApiKey(res.token);
+      const user: UserProfile = {
+        id: res.user?.id || 'user',
+        name: res.user?.name || email.split('@')[0],
+        email: res.user?.email || res.email,
+        role: res.user?.role || 'admin',
+        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(res.email)}`,
+        isTwoFactorEnabled: Boolean(res.user?.isTwoFactorEnabled),
+      };
+      setCurrentUser(user);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('axiomra_user', JSON.stringify(user));
+      }
+      return { success: true };
+    }
+    return { success: false };
   };
 
   const loginWithApiKey = (key: string): boolean => {
@@ -216,6 +247,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         loginWithApiKey,
         logout,
+        refreshUser,
         hasPermission,
       }}
     >

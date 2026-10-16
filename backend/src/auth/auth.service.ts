@@ -1,18 +1,22 @@
-import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
+import { generateSecret, generateURI, verifySync } from 'otplib';
+import * as QRCode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './register.dto';
 
 export interface UserSessionPayload {
-  token: string;
+  token?: string;
   email: string;
-  user: {
+  requiresTwoFactor?: boolean;
+  user?: {
     id: string;
     email: string;
     name: string;
     role: string;
+    isTwoFactorEnabled?: boolean;
   };
 }
 
@@ -104,7 +108,7 @@ export class AuthService {
     };
   }
 
-  async login(email: string, password: string): Promise<UserSessionPayload> {
+  async login(email: string, password: string, twoFactorCode?: string): Promise<UserSessionPayload> {
     const gotEmail = (email ?? '').trim().toLowerCase();
     const gotPass = (password ?? '').trim();
 
@@ -120,6 +124,22 @@ export class AuthService {
         throw new UnauthorizedException('Invalid email or password');
       }
 
+      // If user has 2FA enabled:
+      if (dbUser.isTwoFactorEnabled) {
+        if (!twoFactorCode || !twoFactorCode.trim()) {
+          return {
+            email: dbUser.email,
+            requiresTwoFactor: true,
+          };
+        }
+
+        const cleanCode = twoFactorCode.trim().replace(/\s+/g, '');
+        const res = verifySync({ token: cleanCode, secret: dbUser.twoFactorSecret || '' });
+        if (!res?.valid) {
+          throw new UnauthorizedException('Invalid two-factor authentication code');
+        }
+      }
+
       const token = this.createSessionToken(dbUser.id, dbUser.email, dbUser.role);
       return {
         token,
@@ -129,6 +149,7 @@ export class AuthService {
           email: dbUser.email,
           name: dbUser.name || dbUser.email.split('@')[0],
           role: dbUser.role,
+          isTwoFactorEnabled: Boolean(dbUser.isTwoFactorEnabled),
         },
       };
     }
@@ -159,6 +180,7 @@ export class AuthService {
           email: gotEmail,
           name: gotEmail.split('@')[0],
           role: 'admin',
+          isTwoFactorEnabled: false,
         },
       };
     }
@@ -174,6 +196,7 @@ export class AuthService {
         email: 'dev@axiomra.ai',
         name: 'Developer',
         role: 'admin',
+        isTwoFactorEnabled: false,
       };
     }
 
@@ -189,6 +212,7 @@ export class AuthService {
             email: user.email,
             name: user.name || user.email.split('@')[0],
             role: user.role,
+            isTwoFactorEnabled: Boolean(user.isTwoFactorEnabled),
           };
         }
       }
@@ -197,10 +221,90 @@ export class AuthService {
         email: payload.email || '',
         name: payload.email ? payload.email.split('@')[0] : 'User',
         role: payload.role || 'admin',
+        isTwoFactorEnabled: false,
       };
     } catch {
       throw new UnauthorizedException('Invalid or expired session token');
     }
+  }
+
+  async generateTwoFactorSecret(token: string) {
+    const me = await this.getMe(token);
+    if (!me || me.id === 'api-key-user') {
+      throw new BadRequestException('Two-factor authentication requires a user account');
+    }
+
+    const secret = generateSecret();
+    const issuer = this.config.get<string>('TOTP_ISSUER') || 'VoiceAgent';
+    const otpauthUrl = generateURI({ issuer, label: me.email, secret });
+    const qrCode = await QRCode.toDataURL(otpauthUrl);
+
+    return {
+      secret,
+      qrCode,
+      otpauthUrl,
+    };
+  }
+
+  async enableTwoFactor(token: string, secret: string, code: string) {
+    const me = await this.getMe(token);
+    if (!me || me.id === 'api-key-user') {
+      throw new BadRequestException('Two-factor authentication requires a user account');
+    }
+
+    if (!secret || !code) {
+      throw new BadRequestException('Secret and 6-digit verification code are required');
+    }
+
+    const cleanCode = code.trim().replace(/\s+/g, '');
+    const res = verifySync({ token: cleanCode, secret: secret.trim() });
+    if (!res?.valid) {
+      throw new UnauthorizedException('Invalid verification code. Please check your authenticator app and try again.');
+    }
+
+    await this.prisma.user.update({
+      where: { id: me.id },
+      data: {
+        isTwoFactorEnabled: true,
+        twoFactorSecret: secret.trim(),
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Two-factor authentication enabled successfully',
+    };
+  }
+
+  async disableTwoFactor(token: string, code: string) {
+    const me = await this.getMe(token);
+    if (!me || me.id === 'api-key-user') {
+      throw new BadRequestException('Two-factor authentication requires a user account');
+    }
+
+    const dbUser = await this.prisma.user.findUnique({ where: { id: me.id } });
+    if (!dbUser?.isTwoFactorEnabled || !dbUser.twoFactorSecret) {
+      return { success: true, message: 'Two-factor authentication is already disabled' };
+    }
+
+    const cleanCode = (code || '').trim().replace(/\s+/g, '');
+    const res = verifySync({ token: cleanCode, secret: dbUser.twoFactorSecret });
+    if (!res?.valid) {
+      throw new UnauthorizedException('Invalid verification code');
+    }
+
+    await this.prisma.user.update({
+      where: { id: me.id },
+      data: {
+        isTwoFactorEnabled: false,
+        twoFactorSecret: null,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Two-factor authentication disabled successfully',
+    };
   }
 
   isSessionToken(token: string): boolean {

@@ -21,7 +21,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   login(@Body() body: LoginDto) {
-    return this.auth.login(body.email, body.password);
+    return this.auth.login(body.email, body.password, body.twoFactorCode);
   }
 
   @Get('me')
@@ -30,4 +30,32 @@ export class AuthController {
     const token = (authHeader || '').replace(/^Bearer\s+/i, '').trim();
     return this.auth.getMe(token);
   }
+
+  @Get('2fa/generate')
+  @UseGuards(ApiKeyGuard)
+  generateTwoFactor(@Headers('authorization') authHeader: string) {
+    const token = (authHeader || '').replace(/^Bearer\s+/i, '').trim();
+    return this.auth.generateTwoFactorSecret(token);
+  }
+
+  @Post('2fa/enable')
+  @UseGuards(ApiKeyGuard)
+  enableTwoFactor(
+    @Headers('authorization') authHeader: string,
+    @Body() body: { secret: string; code: string },
+  ) {
+    const token = (authHeader || '').replace(/^Bearer\s+/i, '').trim();
+    return this.auth.enableTwoFactor(token, body.secret, body.code);
+  }
+
+  @Post('2fa/disable')
+  @UseGuards(ApiKeyGuard)
+  disableTwoFactor(
+    @Headers('authorization') authHeader: string,
+    @Body() body: { code: string },
+  ) {
+    const token = (authHeader || '').replace(/^Bearer\s+/i, '').trim();
+    return this.auth.disableTwoFactor(token, body.code);
+  }
 }
+

@@ -108,7 +108,7 @@ async function fetchWithAuth<T>(path: string, options: RequestInit = {}, apiKey:
 
 export const apiClient = {
   getMe: (apiKey: string) =>
-    fetchWithAuth<{ id: string; email: string; name: string; role: string }>('/auth/me', {}, apiKey),
+    fetchWithAuth<{ id: string; email: string; name: string; role: string; isTwoFactorEnabled?: boolean }>('/auth/me', {}, apiKey),
 
   getSetupStatus: () =>
     fetch(`${BASE_URL}/auth/setup-status`).then((res) => res.json() as Promise<{ isSetup: boolean; userCount: number }>),
@@ -126,18 +126,35 @@ export const apiClient = {
       return response.json() as Promise<{ token: string; email: string; user?: any }>;
     }),
 
-  login: (email: string, password: string) =>
+  login: (email: string, password: string, twoFactorCode?: string) =>
     fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, twoFactorCode }),
     }).then(async (response) => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: response.statusText }));
         throw new Error(errorData.message || 'Login failed');
       }
-      return response.json() as Promise<{ token: string; email: string; user?: any }>;
+      return response.json() as Promise<{ token?: string; email: string; requiresTwoFactor?: boolean; user?: any }>;
     }),
+
+  generateTwoFactor: (apiKey: string) =>
+    fetchWithAuth<{ secret: string; qrCode: string; otpauthUrl: string }>('/auth/2fa/generate', {}, apiKey),
+
+  enableTwoFactor: (secret: string, code: string, apiKey: string) =>
+    fetchWithAuth<{ success: boolean; message: string }>(
+      '/auth/2fa/enable',
+      { method: 'POST', body: JSON.stringify({ secret, code }), headers: { 'Content-Type': 'application/json' } },
+      apiKey,
+    ),
+
+  disableTwoFactor: (code: string, apiKey: string) =>
+    fetchWithAuth<{ success: boolean; message: string }>(
+      '/auth/2fa/disable',
+      { method: 'POST', body: JSON.stringify({ code }), headers: { 'Content-Type': 'application/json' } },
+      apiKey,
+    ),
 
   // Health
   getHealth: (apiKey: string) => fetchWithAuth<HealthCheck>('/health', {}, apiKey),

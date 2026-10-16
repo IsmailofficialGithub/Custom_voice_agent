@@ -5,7 +5,8 @@ import { useAuth } from '../../context/auth-context';
 import { useToast } from '../../context/toast-context';
 import { apiClient } from '../../lib/api-client';
 import companyConfig from '../../config/company.json';
-import { Key, Activity, LogOut, Check, Shield } from 'lucide-react';
+import { Key, Activity, LogOut, Check, Shield, ShieldCheck } from 'lucide-react';
+import { TwoFactorModal } from '../auth/two-factor-modal';
 
 export function Header() {
   const { currentUser, switchUser, demoUsers, apiKey, setApiKey, logout } = useAuth();
@@ -13,6 +14,7 @@ export function Header() {
 
   const [healthStatus, setHealthStatus] = useState<'connected' | 'error' | 'checking'>('checking');
   const [showKeyModal, setShowKeyModal] = useState(false);
+  const [show2FAModal, setShow2FAModal] = useState(false);
   const [tempApiKey, setTempApiKey] = useState(apiKey);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
@@ -67,6 +69,16 @@ export function Header() {
 
         <button
           type="button"
+          onClick={() => setShow2FAModal(true)}
+          className="ui-btn ui-btn-ghost flex items-center gap-1.5"
+          title="Configure Two-Factor Authentication"
+        >
+          <ShieldCheck className={`h-3.5 w-3.5 ${currentUser.isTwoFactorEnabled ? 'text-[var(--ok)]' : 'text-[var(--text-muted)]'}`} />
+          <span className="hidden sm:inline">2FA</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => {
             setTempApiKey(apiKey);
             setShowKeyModal(true);
@@ -99,6 +111,26 @@ export function Header() {
                 <div className="text-xs font-medium text-[var(--text)]">{currentUser.name}</div>
                 <div className="text-[11px] text-[var(--text-muted)]">{currentUser.email}</div>
               </div>
+
+              <div className="border-b border-[var(--border)] py-1.5 px-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUserDropdown(false);
+                    setShow2FAModal(true);
+                  }}
+                  className="flex w-full items-center justify-between rounded-md p-1.5 text-xs text-[var(--text)] hover:bg-[var(--surface-hover)]"
+                >
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className={`h-3.5 w-3.5 ${currentUser.isTwoFactorEnabled ? 'text-[var(--ok)]' : 'text-[var(--text-muted)]'}`} />
+                    <span>Two-Factor Auth</span>
+                  </div>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${currentUser.isTwoFactorEnabled ? 'bg-[var(--ok)]/20 text-[var(--ok)]' : 'bg-[var(--bg)] text-[var(--text-muted)]'}`}>
+                    {currentUser.isTwoFactorEnabled ? 'Enabled' : 'Off'}
+                  </span>
+                </button>
+              </div>
+
               <p className="ui-label mt-2 px-2">Switch user</p>
               <div className="space-y-0.5">
                 {demoUsers.map((user) => (
@@ -144,6 +176,8 @@ export function Header() {
           )}
         </div>
       </div>
+
+      <TwoFactorModal isOpen={show2FAModal} onClose={() => setShow2FAModal(false)} />
 
       {showKeyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
