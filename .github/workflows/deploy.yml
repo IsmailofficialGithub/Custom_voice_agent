@@ -47,6 +47,7 @@ jobs:
           AUTH_EMAIL=${{ secrets.AUTH_EMAIL }}
           AUTH_PASSWORD=${{ secrets.AUTH_PASSWORD }}
           AUTH_JWT_SECRET=${{ secrets.AUTH_JWT_SECRET || secrets.API_KEY }}
+          TOTP_ISSUER=VoiceAgent
           PORT=3000
           BACKEND_PORT=3011
           FRONTEND_PORT=3010
