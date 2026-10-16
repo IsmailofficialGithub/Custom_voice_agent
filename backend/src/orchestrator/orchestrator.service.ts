@@ -5,6 +5,7 @@ import { LLM_PROVIDER } from '../providers/llm/llm.module';
 import { TimeTool } from '../tools/time.tool';
 import { WebSearchTool } from '../tools/web-search.tool';
 import { KnowledgeBaseTool } from '../tools/knowledge-base.tool';
+import { WebpageReaderTool } from '../tools/webpage-reader.tool';
 import { MemoryService } from '../memory/memory.service';
 import { ConfigService } from '@nestjs/config';
 
@@ -40,6 +41,7 @@ export class OrchestratorService {
     private readonly timeTool: TimeTool,
     private readonly webSearchTool: WebSearchTool,
     private readonly knowledgeBaseTool: KnowledgeBaseTool,
+    private readonly webpageReaderTool: WebpageReaderTool,
     private readonly memoryService: MemoryService,
     private readonly config: ConfigService,
   ) {
@@ -478,6 +480,11 @@ export class OrchestratorService {
         description: this.knowledgeBaseTool.description,
         parameters: this.knowledgeBaseTool.parameters as unknown as Record<string, unknown>,
       },
+      read_webpage: {
+        name: this.webpageReaderTool.name,
+        description: this.webpageReaderTool.description,
+        parameters: this.webpageReaderTool.parameters as unknown as Record<string, unknown>,
+      },
     };
     return enabledTools.filter((t) => allTools[t]).map((t) => allTools[t]);
   }
@@ -499,6 +506,8 @@ export class OrchestratorService {
         return this.webSearchTool.execute(input as { query: string });
       case 'search_knowledge_base':
         return this.knowledgeBaseTool.execute(input as { query: string }, agentId);
+      case 'read_webpage':
+        return this.webpageReaderTool.execute(input as { url: string });
       default:
         return { error: `Unknown tool: ${name}` };
     }

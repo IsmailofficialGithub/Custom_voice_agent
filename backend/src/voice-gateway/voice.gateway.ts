@@ -16,6 +16,7 @@ import { TtsService } from '../providers/tts/tts.service';
 import { RedisService } from '../redis/redis.service';
 import { AuthService } from '../auth/auth.service';
 import { isWakePhraseMatch, isEndPhraseMatch } from './phrase-matcher';
+import { WebpageReaderTool } from '../tools/webpage-reader.tool';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const WebSocket = require('ws');
@@ -61,6 +62,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly ttsService: TtsService,
     private readonly redisService: RedisService,
     private readonly authService: AuthService,
+    private readonly webpageReader: WebpageReaderTool,
   ) {}
 
   async handleConnection(client: WsClient, req: { url?: string; headers: Record<string, string | string[] | undefined> }) {
@@ -898,6 +900,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 - Match script: if spoken or written in Roman/Latin characters, respond in Roman script. If native script, respond in native script.
 - Keep responses short: 1-2 concise spoken sentences.`;
         instructions += multilingualDirective;
+        instructions += `\n\n- WEBPAGE BROWSING: If the user mentions a website, domain, link, or URL (e.g. ismailabbasi.qzz.io), call the 'read_webpage' function immediately to fetch its live content and answer their questions based on the retrieved information.`;
 
         // Configure session using OpenAI Realtime GA schema with manual turn commits
         const sessionUpdate = {
@@ -905,6 +908,24 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
           session: {
             type: 'realtime',
             instructions,
+            tools: [
+              {
+                type: 'function',
+                name: 'read_webpage',
+                description:
+                  'Read and extract information from a website or URL using Jina Reader. Call this whenever the user asks about a website, portfolio, link, domain, or asks to check a specific web address.',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    url: {
+                      type: 'string',
+                      description: 'The URL or website domain to read, e.g. https://ismailabbasi.qzz.io',
+                    },
+                  },
+                  required: ['url'],
+                },
+              },
+            ],
             audio: {
               input: {
                 format: { type: 'audio/pcm', rate: 24000 },
@@ -958,7 +979,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  private handleRealtimeEvent(client: WsClient, session: VoiceSession, event: any) {
+  private async handleRealtimeEvent(client: WsClient, session: VoiceSession, event: any) {
     switch (event.type) {
       case 'input_audio_buffer.speech_started':
         // Realtime server VAD detected barge-in
@@ -976,6 +997,48 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
         break;
 
       case 'response.output_audio.delta':
+      case 'response.function_call_arguments.done':
+        if (event.name === 'read_webpage') {
+          try {
+            const args = typeof event.arguments === 'string' ? JSON.parse(event.arguments) : event.arguments;
+            const targetUrl = args?.url || '';
+            this.logger.log(`[Realtime Tool Call] read_webpage for "${targetUrl}" (call_id: ${event.call_id})`);
+            this.send(client, { type: 'status', status: 'thinking' });
+
+            const result = await this.webpageReader.execute({ url: targetUrl });
+
+            if (session.realtimeWs && session.realtimeWs.readyState === WebSocket.OPEN) {
+              session.realtimeWs.send(
+                JSON.stringify({
+                  type: 'conversation.item.create',
+                  item: {
+                    type: 'function_call_output',
+                    call_id: event.call_id,
+                    output: JSON.stringify(result),
+                  },
+                }),
+              );
+              session.realtimeWs.send(JSON.stringify({ type: 'response.create' }));
+            }
+          } catch (err: any) {
+            this.logger.error(`Error executing read_webpage tool: ${err?.message}`);
+            if (session.realtimeWs && session.realtimeWs.readyState === WebSocket.OPEN) {
+              session.realtimeWs.send(
+                JSON.stringify({
+                  type: 'conversation.item.create',
+                  item: {
+                    type: 'function_call_output',
+                    call_id: event.call_id,
+                    output: JSON.stringify({ success: false, error: 'Failed to read website content' }),
+                  },
+                }),
+              );
+              session.realtimeWs.send(JSON.stringify({ type: 'response.create' }));
+            }
+          }
+        }
+        break;
+
       case 'response.audio.delta':
         if (session.lifecycleState === 'ending') {
           return;

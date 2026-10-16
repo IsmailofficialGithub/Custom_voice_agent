@@ -1,6 +1,6 @@
 import {
   Controller, Post, Get, Delete, Patch, Param, Body, UseGuards,
-  UseInterceptors, UploadedFile, HttpCode, HttpStatus,
+  UseInterceptors, UploadedFile, HttpCode, HttpStatus, BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -37,6 +37,16 @@ export class DocumentsController {
   )
   async upload(@Param('agentId') agentId: string, @UploadedFile() file: Express.Multer.File) {
     return this.documentsService.processUpload(agentId, file);
+  }
+
+  // POST /api/v1/agents/:agentId/documents/url
+  @Post('agents/:agentId/documents/url')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async importUrl(@Param('agentId') agentId: string, @Body() body: { url: string }) {
+    if (!body?.url?.trim()) {
+      throw new BadRequestException('A valid website URL is required');
+    }
+    return this.documentsService.processUrlUpload(agentId, body.url);
   }
 
   // GET /api/v1/agents/:agentId/documents

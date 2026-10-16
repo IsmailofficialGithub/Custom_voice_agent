@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmbeddingService } from '../providers/embedding/embedding.service';
 import * as fs from 'fs';
+import axios from 'axios';
 
 const CHUNK_SIZE = 700; // target tokens (~700 words approximation)
 const CHUNK_OVERLAP = 100;
@@ -46,6 +47,36 @@ export class DocumentsService {
     return { id: doc.id, filename: doc.filename, status: doc.status };
   }
 
+  async processUrlUpload(agentId: string, rawUrl: string) {
+    const agent = await this.prisma.agent.findUnique({ where: { id: agentId } });
+    if (!agent) throw new NotFoundException(`Agent ${agentId} not found`);
+
+    let target = rawUrl.trim();
+    if (!/^https?:\/\//i.test(target)) target = `https://${target}`;
+
+    if (!agent.enabledTools.includes('search_knowledge_base')) {
+      await this.prisma.agent.update({
+        where: { id: agentId },
+        data: { enabledTools: [...agent.enabledTools, 'search_knowledge_base'] },
+      });
+      this.logger.log(`Enabled search_knowledge_base on agent ${agentId} after URL import`);
+    }
+
+    const doc = await this.prisma.document.create({
+      data: { agentId, filename: target, status: 'processing' },
+    });
+
+    this.ingestUrl(doc.id, target).catch((err) => {
+      this.logger.error(`URL ingestion failed for doc ${doc.id}: ${err}`);
+      this.prisma.document.update({
+        where: { id: doc.id },
+        data: { status: 'failed' },
+      }).catch(() => {});
+    });
+
+    return { id: doc.id, filename: doc.filename, status: doc.status };
+  }
+
   private async ingestDocument(documentId: string, filePath: string): Promise<void> {
     const text = await this.extractPdfText(filePath);
 
@@ -79,6 +110,53 @@ export class DocumentsService {
     });
 
     this.logger.log(`Document ${documentId} ingestion complete`);
+  }
+
+  private async ingestUrl(documentId: string, url: string): Promise<void> {
+    let text = '';
+    try {
+      this.logger.log(`Ingesting URL via Jina Reader: ${url}`);
+      const res = await axios.get(`https://r.jina.ai/${url}`, {
+        headers: { Accept: 'text/plain', 'X-Return-Format': 'text' },
+        timeout: 15000,
+      });
+      if (res.status === 200 && typeof res.data === 'string' && res.data.length > 50) {
+        text = res.data;
+      }
+    } catch (err: any) {
+      this.logger.warn(`Jina Reader failed for ${url}: ${err?.message}, attempting fallback fetch`);
+    }
+
+    if (!text) {
+      const res = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
+        timeout: 10000,
+      });
+      const html = typeof res.data === 'string' ? res.data : '';
+      text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    const chunks = this.chunkText(text);
+    if (chunks.length === 0) {
+      this.logger.warn(`No text chunks extracted for URL doc ${documentId}`);
+      await this.prisma.document.update({ where: { id: documentId }, data: { status: 'failed' } });
+      return;
+    }
+
+    const embeddings = await this.embedding.embedBatch(chunks);
+    for (let i = 0; i < chunks.length; i++) {
+      const embeddingStr = `[${embeddings[i].join(',')}]`;
+      await this.prisma.$executeRaw`
+        INSERT INTO document_chunks (id, document_id, chunk_index, content, embedding)
+        VALUES (gen_random_uuid(), ${documentId}, ${i}, ${chunks[i]}, ${embeddingStr}::vector)
+      `;
+    }
+
+    await this.prisma.document.update({ where: { id: documentId }, data: { status: 'ready' } });
+    this.logger.log(`URL Document ${documentId} ingestion complete (${chunks.length} chunks)`);
   }
 
   private async extractPdfText(filePath: string): Promise<string> {

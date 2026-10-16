@@ -23,6 +23,8 @@ function DocumentsContent() {
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [reassigningId, setReassigningId] = useState<string | null>(null);
+  const [urlInput, setUrlInput] = useState('');
+  const [importingUrl, setImportingUrl] = useState(false);
 
   useEffect(() => {
     loadAgents();
@@ -85,6 +87,30 @@ function DocumentsContent() {
       showError(err, 'Upload');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleImportUrl = async () => {
+    const trimmed = urlInput.trim();
+    if (!trimmed) {
+      showError('Please enter a website URL.', 'Import URL');
+      return;
+    }
+    if (!selectedAgentId) {
+      showError('Select an agent first.', 'Import URL');
+      return;
+    }
+    setImportingUrl(true);
+    try {
+      await apiClient.importDocumentUrl(selectedAgentId, trimmed, apiKey);
+      showSuccess('Website Imported', `Added to ${selectedAgent?.name}'s knowledge base`);
+      setUrlInput('');
+      await loadAgents();
+      loadDocuments(selectedAgentId);
+    } catch (err) {
+      showError(err, 'Import URL');
+    } finally {
+      setImportingUrl(false);
     }
   };
 
@@ -185,6 +211,30 @@ function DocumentsContent() {
               Chat
             </Link>
           )}
+        </div>
+
+        <div className="pt-3 border-t border-[var(--border)]">
+          <label className="ui-label">Or import from website URL</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="e.g. https://ismailabbasi.qzz.io"
+              value={urlInput}
+              onChange={(e) => setUrlInput(e.target.value)}
+              className="ui-input flex-1"
+            />
+            <button
+              type="button"
+              onClick={handleImportUrl}
+              disabled={importingUrl || !urlInput.trim() || !selectedAgentId}
+              className="ui-btn ui-btn-primary shrink-0"
+            >
+              {importingUrl ? 'Importing…' : 'Import URL'}
+            </button>
+          </div>
+          <p className="mt-1.5 text-[11px] text-[var(--text-faint)]">
+            Fetches live content via Jina Reader, cleans the HTML, and embeds it into your agent's knowledge base.
+          </p>
         </div>
       </section>
 

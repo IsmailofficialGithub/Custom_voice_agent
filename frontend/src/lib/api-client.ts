@@ -194,6 +194,12 @@ export const apiClient = {
     formData.append('file', file);
     return fetchWithAuth<DocumentItem>(`/agents/${agentId}/documents`, { method: 'POST', body: formData }, apiKey);
   },
+  importDocumentUrl: (agentId: string, url: string, apiKey: string) =>
+    fetchWithAuth<DocumentItem>(
+      `/agents/${agentId}/documents/url`,
+      { method: 'POST', body: JSON.stringify({ url }), headers: { 'Content-Type': 'application/json' } },
+      apiKey,
+    ),
   reassignDocument: (id: string, agentId: string, apiKey: string) =>
     fetchWithAuth<DocumentItem>(
       `/documents/${id}`,
