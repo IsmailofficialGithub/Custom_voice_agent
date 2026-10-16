@@ -139,9 +139,9 @@ export class ConversationsService {
 
   async markConnected(conversationId: string) {
     try {
-      await this.prisma.conversation.updateMany({
-        where: { id: conversationId, messages: { none: {} } },
-        data: { startedAt: new Date() },
+      await this.prisma.conversation.update({
+        where: { id: conversationId },
+        data: { endedAt: null },
       });
     } catch {
       // ignore

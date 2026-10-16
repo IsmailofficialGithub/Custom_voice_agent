@@ -226,6 +226,7 @@ function PlaygroundContent() {
   const { showError, showSuccess } = useToast();
   const searchParams = useSearchParams();
   const initialAgentId = searchParams.get('agentId');
+  const initialConversationId = searchParams.get('conversationId');
 
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState(initialAgentId || '');
@@ -388,7 +389,7 @@ function PlaygroundContent() {
   };
 
   useEffect(() => {
-    if (!startCallParam || !selectedAgentId || agents.length === 0 || !apiKey || autoStartedRef.current) {
+    if ((!startCallParam && !initialConversationId) || !selectedAgentId || agents.length === 0 || !apiKey || autoStartedRef.current) {
       return;
     }
     autoStartedRef.current = true;
@@ -397,6 +398,13 @@ function PlaygroundContent() {
       try {
         const convs = await apiClient.getConversations(selectedAgentId, apiKey);
         setConversations(convs);
+        if (initialConversationId) {
+          const match = convs.find((c) => c.id === initialConversationId);
+          if (match) {
+            setActiveConversation({ ...match, endedAt: null });
+            return;
+          }
+        }
         const ongoing = convs.find((c) => !c.endedAt);
         if (ongoing) {
           setActiveConversation(ongoing);
@@ -405,11 +413,13 @@ function PlaygroundContent() {
       } catch {
         // Fall back to creating a new call
       }
-      startCallDirectly(selectedAgentId);
+      if (startCallParam) {
+        startCallDirectly(selectedAgentId);
+      }
     };
 
     resumeOrCreateCall();
-  }, [startCallParam, selectedAgentId, agents, apiKey]);
+  }, [startCallParam, initialConversationId, selectedAgentId, agents, apiKey]);
 
   const openNewChatModal = () => {
     if (!selectedAgentId) {

@@ -84,12 +84,9 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const conv = await this.conversations.getConversationWithAgent(conversationId);
       if (conv?.endedAt) {
-        this.send(client, {
-          type: 'error',
-          message: 'This conversation has ended and cannot be resumed.',
-        });
-        client.close(1008, 'Conversation completed');
-        return;
+        if (this.conversations?.markConnected) {
+          await this.conversations.markConnected(conversationId);
+        }
       }
       if (conv?.agent) {
         startPhrase = conv.agent.startPhrase || startPhrase;
