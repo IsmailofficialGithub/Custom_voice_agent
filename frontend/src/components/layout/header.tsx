@@ -42,8 +42,9 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 flex w-full items-center justify-between border-b border-[var(--border)] bg-[var(--bg-elevated)] px-5 py-3">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] font-mono text-sm font-semibold text-[var(--text)]">
-          {companyConfig.logo}
+        <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt={companyConfig.name} className="h-full w-full object-contain" />
         </div>
         <div>
           <div className="flex items-center gap-2">

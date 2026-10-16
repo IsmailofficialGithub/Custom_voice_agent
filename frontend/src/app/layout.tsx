@@ -23,6 +23,11 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: 'Axiomra Voice',
   description: 'Voice agents with documents, memory, and realtime chat',
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/favicon.ico',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({

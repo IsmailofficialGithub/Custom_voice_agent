@@ -57,8 +57,9 @@ export function LoginPage() {
       <div className="w-full max-w-md space-y-6">
         {/* Brand header */}
         <div className="text-center space-y-2">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface)] text-xl font-bold font-mono text-[var(--text)] shadow-lg">
-            {companyConfig.logo}
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-2 shadow-xl">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt={companyConfig.name} className="h-full w-full object-contain" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">
             Sign in to your account
