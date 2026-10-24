@@ -6,7 +6,7 @@ import { useToast } from '../../context/toast-context';
 import { useTheme } from '../../context/theme-context';
 import { apiClient } from '../../lib/api-client';
 import companyConfig from '../../config/company.json';
-import { Key, Activity, LogOut, Check, Shield, ShieldCheck, Sun, Moon, Menu } from 'lucide-react';
+import { Key, Activity, Sun, Moon, Menu, ShieldCheck } from 'lucide-react';
 import { TwoFactorModal } from '../auth/two-factor-modal';
 
 interface HeaderProps {
@@ -14,7 +14,7 @@ interface HeaderProps {
 }
 
 export function Header({ onToggleMenu }: HeaderProps) {
-  const { currentUser, switchUser, demoUsers, apiKey, setApiKey, logout } = useAuth();
+  const { currentUser, apiKey, setApiKey } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { showSuccess } = useToast();
 
@@ -22,11 +22,10 @@ export function Header({ onToggleMenu }: HeaderProps) {
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [show2FAModal, setShow2FAModal] = useState(false);
   const [tempApiKey, setTempApiKey] = useState(apiKey);
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   useEffect(() => {
     checkHealth();
-    const interval = setInterval(checkHealth, 15000);
+    const interval = setInterval(checkHealth, 20000);
     return () => clearInterval(interval);
   }, [apiKey]);
 
@@ -46,7 +45,7 @@ export function Header({ onToggleMenu }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-40 flex w-full items-center justify-between border-b border-[var(--border)] bg-[var(--bg-elevated)] px-3 sm:px-5 py-2.5 sm:py-3">
+    <header className="sticky top-0 z-30 flex w-full items-center justify-between border-b border-[var(--border)] bg-[var(--bg-elevated)] px-3 sm:px-5 py-2.5 sm:py-3">
       <div className="flex items-center gap-2.5 sm:gap-3">
         {onToggleMenu && (
           <button
@@ -71,12 +70,12 @@ export function Header({ onToggleMenu }: HeaderProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-2 sm:gap-2.5">
         <button
           type="button"
           onClick={checkHealth}
-          className="hidden items-center gap-2 rounded-md border border-[var(--border)] px-2.5 py-1.5 text-xs text-[var(--text-muted)] hover:border-[var(--border-strong)] sm:inline-flex"
-          title="Recheck backend"
+          className="hidden items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-xs text-[var(--text-muted)] hover:border-[var(--border-strong)] sm:inline-flex"
+          title="Backend connection status"
         >
           <Activity
             className={`h-3.5 w-3.5 ${healthStatus === 'connected' ? 'text-[var(--ok)]' : healthStatus === 'checking' ? 'text-[var(--text-faint)]' : 'text-[var(--danger)]'}`}
@@ -119,110 +118,23 @@ export function Header({ onToggleMenu }: HeaderProps) {
           <Key className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">API key</span>
         </button>
-
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowUserDropdown(!showUserDropdown)}
-            className="flex items-center gap-2 rounded-md border border-[var(--border)] p-1.5 pr-2.5 text-left hover:border-[var(--border-strong)]"
-          >
-            <img src={currentUser.avatar} alt="" className="h-7 w-7 rounded bg-[var(--surface)]" />
-            <div className="hidden sm:block">
-              <div className="flex items-center gap-1 text-xs font-medium text-[var(--text)]">
-                {currentUser.name}
-                <Shield className="h-3 w-3 text-[var(--text-faint)]" />
-              </div>
-              <div className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">{currentUser.role}</div>
-            </div>
-          </button>
-
-          {showUserDropdown && (
-            <div className="absolute right-0 z-50 mt-2 w-72 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 shadow-xl">
-              <div className="border-b border-[var(--border)] px-2 py-2">
-                <div className="text-xs font-medium text-[var(--text)]">{currentUser.name}</div>
-                <div className="text-[11px] text-[var(--text-muted)]">{currentUser.email}</div>
-              </div>
-
-              <div className="border-b border-[var(--border)] py-1.5 px-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowUserDropdown(false);
-                    setShow2FAModal(true);
-                  }}
-                  className="flex w-full items-center justify-between rounded-md p-1.5 text-xs text-[var(--text)] hover:bg-[var(--surface-hover)]"
-                >
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className={`h-3.5 w-3.5 ${currentUser.isTwoFactorEnabled ? 'text-[var(--ok)]' : 'text-[var(--text-muted)]'}`} />
-                    <span>Two-Factor Auth</span>
-                  </div>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${currentUser.isTwoFactorEnabled ? 'bg-[var(--ok)]/20 text-[var(--ok)]' : 'bg-[var(--bg)] text-[var(--text-muted)]'}`}>
-                    {currentUser.isTwoFactorEnabled ? 'Enabled' : 'Off'}
-                  </span>
-                </button>
-              </div>
-
-              <p className="ui-label mt-2 px-2">Switch user</p>
-              <div className="space-y-0.5">
-                {demoUsers.map((user) => (
-                  <button
-                    key={user.id}
-                    type="button"
-                    onClick={() => {
-                      switchUser(user.id);
-                      setShowUserDropdown(false);
-                      showSuccess('Switched', user.name);
-                    }}
-                    className={`flex w-full items-center justify-between rounded-md p-2 text-xs ${
-                      user.id === currentUser.id
-                        ? 'bg-[var(--bg)] text-[var(--text)]'
-                        : 'text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <img src={user.avatar} alt="" className="h-6 w-6 rounded" />
-                      <div className="text-left">
-                        <div>{user.name}</div>
-                        <div className="text-[10px] opacity-70">{user.role}</div>
-                      </div>
-                    </div>
-                    {user.id === currentUser.id && <Check className="h-3.5 w-3.5" />}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-2 border-t border-[var(--border)] pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    logout();
-                    setShowUserDropdown(false);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-xs text-[var(--danger)] hover:bg-[var(--bg)]"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                  Sign out
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
 
       <TwoFactorModal isOpen={show2FAModal} onClose={() => setShow2FAModal(false)} />
 
       {showKeyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
+          <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--text)]">API key</h3>
+              <h3 className="text-sm font-semibold text-[var(--text)]">API Key</h3>
               <button type="button" onClick={() => setShowKeyModal(false)} className="text-[var(--text-muted)] hover:text-[var(--text)]">
                 Close
               </button>
             </div>
             <p className="mb-3 text-xs leading-relaxed text-[var(--text-muted)]">
-              Must match <code className="font-mono text-[var(--text)]">API_KEY</code> in the backend env.
+              Enter your backend <code className="font-mono text-[var(--text)]">API_KEY</code> to authorize voice requests.
             </p>
-            <label className="ui-label">Bearer key</label>
+            <label className="ui-label">Bearer Key</label>
             <input
               type="text"
               value={tempApiKey}

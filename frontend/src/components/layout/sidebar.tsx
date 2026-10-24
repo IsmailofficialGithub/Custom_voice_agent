@@ -3,8 +3,9 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '../../context/auth-context';
 import uiConfig from '../../config/ui.json';
-import { LayoutDashboard, Bot, Mic, FileText, Brain, Users, X } from 'lucide-react';
+import { LayoutDashboard, Bot, Mic, FileText, Brain, Users, X, LogOut, Shield } from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   LayoutDashboard: <LayoutDashboard className="h-4 w-4" />,
@@ -22,6 +23,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { currentUser, logout } = useAuth();
 
   return (
     <>
@@ -75,12 +77,28 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </nav>
         </div>
 
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-emerald-500" />
-            <p className="text-[11px] font-semibold text-[var(--text)]">Axiomra Voice</p>
+        {/* User Card & Logout in Bottom Left */}
+        <div className="space-y-2 border-t border-[var(--border)] pt-3">
+          <div className="flex items-center gap-2.5 px-2 py-1">
+            <img
+              src={currentUser.avatar}
+              alt=""
+              className="h-8 w-8 rounded-lg bg-[var(--surface)] border border-[var(--border)] shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-xs font-semibold text-[var(--text)]">{currentUser.name}</div>
+              <div className="truncate text-[10px] text-[var(--text-muted)] capitalize">{currentUser.role}</div>
+            </div>
           </div>
-          <p className="mt-1 text-[10px] text-[var(--text-faint)]">Realtime conversational AI</p>
+
+          <button
+            type="button"
+            onClick={logout}
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--danger)] hover:bg-[var(--danger)]/10 transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Sign out</span>
+          </button>
         </div>
       </aside>
     </>

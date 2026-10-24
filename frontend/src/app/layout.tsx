@@ -37,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${plexSans.variable} ${plexMono.variable} dark`} suppressHydrationWarning>
+    <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`} suppressHydrationWarning>
       <body className={`${plexSans.className} flex min-h-screen flex-col bg-[var(--bg)] text-[var(--text)] antialiased selection:bg-indigo-500/20`}>
         <ThemeProvider>
           <ToastProvider>
