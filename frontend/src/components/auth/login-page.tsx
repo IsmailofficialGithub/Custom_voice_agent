@@ -207,21 +207,6 @@ export function LoginPage() {
                 <span>{busy ? 'Signing in…' : 'Sign in'}</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
-
-              {/* Demo Fill Helper */}
-              <div className="pt-2 text-center text-[11px] text-[var(--text-muted)] border-t border-[var(--border)]">
-                <span>Demo account: </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('alex@axiomra.ai');
-                    setPassword('password123');
-                  }}
-                  className="font-medium text-[var(--accent)] hover:underline ml-1"
-                >
-                  Click to auto-fill
-                </button>
-              </div>
             </form>
           )}
         </div>

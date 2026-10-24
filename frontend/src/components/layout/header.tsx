@@ -2,11 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/auth-context';
-import { useToast } from '../../context/toast-context';
 import { useTheme } from '../../context/theme-context';
 import { apiClient } from '../../lib/api-client';
 import companyConfig from '../../config/company.json';
-import { Key, Activity, Sun, Moon, Menu, ShieldCheck } from 'lucide-react';
+import { Activity, Sun, Moon, Menu, ShieldCheck } from 'lucide-react';
 import { TwoFactorModal } from '../auth/two-factor-modal';
 
 interface HeaderProps {
@@ -14,14 +13,11 @@ interface HeaderProps {
 }
 
 export function Header({ onToggleMenu }: HeaderProps) {
-  const { currentUser, apiKey, setApiKey } = useAuth();
+  const { currentUser, apiKey } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { showSuccess } = useToast();
 
   const [healthStatus, setHealthStatus] = useState<'connected' | 'error' | 'checking'>('checking');
-  const [showKeyModal, setShowKeyModal] = useState(false);
   const [show2FAModal, setShow2FAModal] = useState(false);
-  const [tempApiKey, setTempApiKey] = useState(apiKey);
 
   useEffect(() => {
     checkHealth();
@@ -36,12 +32,6 @@ export function Header({ onToggleMenu }: HeaderProps) {
     } catch {
       setHealthStatus('error');
     }
-  };
-
-  const handleSaveKey = () => {
-    setApiKey(tempApiKey.trim());
-    setShowKeyModal(false);
-    showSuccess('API key saved', 'Authorization updated.');
   };
 
   return (
@@ -106,53 +96,9 @@ export function Header({ onToggleMenu }: HeaderProps) {
             <Moon className="h-3.5 w-3.5 text-indigo-500" />
           )}
         </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setTempApiKey(apiKey);
-            setShowKeyModal(true);
-          }}
-          className="ui-btn ui-btn-ghost"
-        >
-          <Key className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">API key</span>
-        </button>
       </div>
 
       <TwoFactorModal isOpen={show2FAModal} onClose={() => setShow2FAModal(false)} />
-
-      {showKeyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--text)]">API Key</h3>
-              <button type="button" onClick={() => setShowKeyModal(false)} className="text-[var(--text-muted)] hover:text-[var(--text)]">
-                Close
-              </button>
-            </div>
-            <p className="mb-3 text-xs leading-relaxed text-[var(--text-muted)]">
-              Enter your backend <code className="font-mono text-[var(--text)]">API_KEY</code> to authorize voice requests.
-            </p>
-            <label className="ui-label">Bearer Key</label>
-            <input
-              type="text"
-              value={tempApiKey}
-              onChange={(e) => setTempApiKey(e.target.value)}
-              className="ui-input font-mono"
-              placeholder="Enter your API key"
-            />
-            <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={() => setShowKeyModal(false)} className="ui-btn ui-btn-ghost">
-                Cancel
-              </button>
-              <button type="button" onClick={handleSaveKey} className="ui-btn ui-btn-primary">
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   );
 }
