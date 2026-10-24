@@ -3,6 +3,7 @@ import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '../context/auth-context';
 import { ToastProvider } from '../context/toast-context';
+import { ThemeProvider } from '../context/theme-context';
 import { AppShell } from '../components/layout/app-shell';
 import { ToastContainer } from '../components/ui/toast-container';
 
@@ -36,14 +37,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${plexSans.variable} ${plexMono.variable} dark`}>
-      <body className={`${plexSans.className} flex min-h-screen flex-col bg-[var(--bg)] text-[var(--text)] antialiased selection:bg-white/15`}>
-        <ToastProvider>
-          <AuthProvider>
-            <AppShell>{children}</AppShell>
-            <ToastContainer />
-          </AuthProvider>
-        </ToastProvider>
+    <html lang="en" className={`${plexSans.variable} ${plexMono.variable} dark`} suppressHydrationWarning>
+      <body className={`${plexSans.className} flex min-h-screen flex-col bg-[var(--bg)] text-[var(--text)] antialiased selection:bg-indigo-500/20`}>
+        <ThemeProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <AppShell>{children}</AppShell>
+              <ToastContainer />
+            </AuthProvider>
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

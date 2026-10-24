@@ -3,13 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/auth-context';
 import { useToast } from '../../context/toast-context';
+import { useTheme } from '../../context/theme-context';
 import { apiClient } from '../../lib/api-client';
 import companyConfig from '../../config/company.json';
-import { Key, Activity, LogOut, Check, Shield, ShieldCheck } from 'lucide-react';
+import { Key, Activity, LogOut, Check, Shield, ShieldCheck, Sun, Moon } from 'lucide-react';
 import { TwoFactorModal } from '../auth/two-factor-modal';
 
 export function Header() {
   const { currentUser, switchUser, demoUsers, apiKey, setApiKey, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const { showSuccess } = useToast();
 
   const [healthStatus, setHealthStatus] = useState<'connected' | 'error' | 'checking'>('checking');
@@ -76,6 +78,20 @@ export function Header() {
         >
           <ShieldCheck className={`h-3.5 w-3.5 ${currentUser.isTwoFactorEnabled ? 'text-[var(--ok)]' : 'text-[var(--text-muted)]'}`} />
           <span className="hidden sm:inline">2FA</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="ui-btn ui-btn-ghost px-2.5"
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label="Toggle theme"
+        >
+          {theme === 'dark' ? (
+            <Sun className="h-3.5 w-3.5 text-amber-400" />
+          ) : (
+            <Moon className="h-3.5 w-3.5 text-indigo-500" />
+          )}
         </button>
 
         <button
