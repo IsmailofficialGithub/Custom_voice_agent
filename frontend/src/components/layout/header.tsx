@@ -6,10 +6,14 @@ import { useToast } from '../../context/toast-context';
 import { useTheme } from '../../context/theme-context';
 import { apiClient } from '../../lib/api-client';
 import companyConfig from '../../config/company.json';
-import { Key, Activity, LogOut, Check, Shield, ShieldCheck, Sun, Moon } from 'lucide-react';
+import { Key, Activity, LogOut, Check, Shield, ShieldCheck, Sun, Moon, Menu } from 'lucide-react';
 import { TwoFactorModal } from '../auth/two-factor-modal';
 
-export function Header() {
+interface HeaderProps {
+  onToggleMenu?: () => void;
+}
+
+export function Header({ onToggleMenu }: HeaderProps) {
   const { currentUser, switchUser, demoUsers, apiKey, setApiKey, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { showSuccess } = useToast();
@@ -42,18 +46,28 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-40 flex w-full items-center justify-between border-b border-[var(--border)] bg-[var(--bg-elevated)] px-5 py-3">
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-sm">
+    <header className="sticky top-0 z-40 flex w-full items-center justify-between border-b border-[var(--border)] bg-[var(--bg-elevated)] px-3 sm:px-5 py-2.5 sm:py-3">
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        {onToggleMenu && (
+          <button
+            type="button"
+            onClick={onToggleMenu}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text)] md:hidden"
+            aria-label="Toggle navigation menu"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+        )}
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-sm shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt={companyConfig.name} className="h-full w-full object-contain" />
         </div>
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-sm font-semibold tracking-tight text-[var(--text)]">{companyConfig.name}</h1>
-            <span className="font-mono text-[10px] text-[var(--text-faint)]">{companyConfig.version}</span>
+            <span className="font-mono text-[10px] text-[var(--text-faint)] hidden xs:inline">{companyConfig.version}</span>
           </div>
-          <p className="text-xs text-[var(--text-muted)]">{companyConfig.tagline}</p>
+          <p className="text-xs text-[var(--text-muted)] hidden sm:block">{companyConfig.tagline}</p>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Header } from './header';
 import { Sidebar } from './sidebar';
@@ -10,6 +10,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { apiKey, ready } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isPlayground = pathname?.startsWith('/playground');
   const isLoginRoute = pathname === '/login';
 
@@ -22,9 +23,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [ready, apiKey, isLoginRoute, router]);
 
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
+
   if (!ready) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black text-sm text-zinc-500">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg)] text-sm text-[var(--text-muted)]">
         Loading…
       </div>
     );
@@ -44,10 +50,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <Header />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto bg-[var(--bg)] p-6 md:p-8">{children}</main>
+      <Header onToggleMenu={() => setMobileMenuOpen(!mobileMenuOpen)} />
+      <div className="flex flex-1 overflow-hidden relative">
+        <Sidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+        <main className="flex-1 overflow-y-auto bg-[var(--bg)] p-4 sm:p-6 md:p-8">{children}</main>
       </div>
     </>
   );
