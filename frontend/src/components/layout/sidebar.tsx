@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../../context/auth-context';
 import uiConfig from '../../config/ui.json';
-import { LayoutDashboard, Bot, Mic, FileText, Brain, Users, X, LogOut, Shield } from 'lucide-react';
+import { LayoutDashboard, Bot, Mic, FileText, Brain, Users, X, LogOut } from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   LayoutDashboard: <LayoutDashboard className="h-4 w-4" />,
@@ -36,7 +36,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 shrink-0 flex-col justify-between border-r border-[var(--border)] bg-[var(--bg-elevated)] p-4 transition-transform duration-200 ease-in-out md:static md:w-56 md:translate-x-0 md:p-3 ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-full w-64 shrink-0 flex-col justify-between border-r border-[var(--border)] bg-[var(--bg-elevated)] p-4 transition-transform duration-200 ease-in-out md:static md:w-56 md:translate-x-0 md:p-3 overflow-y-auto ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -77,8 +77,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </nav>
         </div>
 
-        {/* User Card & Logout in Bottom Left */}
-        <div className="space-y-2 border-t border-[var(--border)] pt-3">
+        {/* User Card & Logout pinned to bottom of the 100vh sidebar */}
+        <div className="space-y-2 border-t border-[var(--border)] pt-3 mt-auto shrink-0">
           <div className="flex items-center gap-2.5 px-2 py-1">
             <img
               src={currentUser.avatar}
@@ -94,7 +94,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <button
             type="button"
             onClick={logout}
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--danger)] hover:bg-[var(--danger)]/10 transition-colors"
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--danger)] hover:bg-[var(--danger)]/10 transition-colors cursor-pointer"
           >
             <LogOut className="h-4 w-4" />
             <span>Sign out</span>

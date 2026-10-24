@@ -30,7 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--bg)] text-sm text-[var(--text-muted)]">
+      <div className="flex h-screen w-screen items-center justify-center bg-[var(--bg)] text-sm text-[var(--text-muted)]">
         Loading…
       </div>
     );
@@ -45,16 +45,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   if (isPlayground) {
-    return <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">{children}</div>;
+    return <div className="h-screen w-screen overflow-hidden bg-[var(--bg)] text-[var(--text)]">{children}</div>;
   }
 
   return (
-    <>
+    <div className="flex h-screen w-screen flex-col overflow-hidden">
       <Header onToggleMenu={() => setMobileMenuOpen(!mobileMenuOpen)} />
       <div className="flex flex-1 overflow-hidden relative">
         <Sidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
         <main className="flex-1 overflow-y-auto bg-[var(--bg)] p-4 sm:p-6 md:p-8">{children}</main>
       </div>
-    </>
+    </div>
   );
 }
