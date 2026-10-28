@@ -7,6 +7,12 @@ import * as QRCode from 'qrcode';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './register.dto';
 
+export interface RequestUser {
+  id: string;
+  role: string;
+  assignedAgentIds: string[];
+}
+
 export interface UserSessionPayload {
   token?: string;
   email: string;
@@ -305,6 +311,102 @@ export class AuthService {
       success: true,
       message: 'Two-factor authentication disabled successfully',
     };
+  }
+
+  async resolveUser(token: string): Promise<RequestUser | null> {
+    const t = (token ?? '').trim().replace(/^Bearer\s+/i, '');
+    if (!t) return null;
+    const key = this.apiKey();
+    if (key && t === key) return { id: 'api-key-user', role: 'admin', assignedAgentIds: [] };
+    try {
+      const payload = this.jwt.verify<{ sub?: string; role?: string }>(t, { secret: this.jwtSecret() });
+      if (!payload.sub) return null;
+      const user = await this.prisma.user.findUnique({ where: { id: payload.sub } }).catch(() => null);
+      // Legacy env-login tokens have no DB row; they were always issued as admin.
+      if (!user) return { id: payload.sub, role: payload.role || 'admin', assignedAgentIds: [] };
+      return { id: user.id, role: user.role, assignedAgentIds: user.assignedAgentIds ?? [] };
+    } catch {
+      return null;
+    }
+  }
+
+  canAccessAgent(user: RequestUser, agentId: string): boolean {
+    return user.role === 'admin' || user.assignedAgentIds.includes(agentId);
+  }
+
+  async changePassword(token: string, currentPassword: string, newPassword: string, twoFactorCode?: string) {
+    const me = await this.resolveUser(token);
+    const dbUser = me ? await this.prisma.user.findUnique({ where: { id: me.id } }) : null;
+    if (!dbUser) throw new BadRequestException('Password can only be changed for database accounts');
+    if (!this.verifyPassword(currentPassword ?? '', dbUser.passwordHash)) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+    if (dbUser.isTwoFactorEnabled) {
+      if (!twoFactorCode || !dbUser.twoFactorSecret || !verifySync({ token: twoFactorCode, secret: dbUser.twoFactorSecret }).valid) {
+        throw new UnauthorizedException('Invalid two-factor code');
+      }
+    }
+    this.assertStrongPassword(newPassword);
+    await this.prisma.user.update({ where: { id: dbUser.id }, data: { passwordHash: this.hashPassword(newPassword) } });
+    return { success: true };
+  }
+
+  assertStrongPassword(password: string) {
+    if (!password || password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+      throw new BadRequestException('Password must be at least 8 characters and contain letters and numbers');
+    }
+  }
+
+  // --- Admin user management ---
+
+  private publicUser = {
+    id: true, email: true, name: true, role: true, isTwoFactorEnabled: true, assignedAgentIds: true, createdAt: true,
+  } as const;
+
+  listUsers() {
+    return this.prisma.user.findMany({ select: this.publicUser, orderBy: { createdAt: 'asc' } });
+  }
+
+  async createUser(dto: { email: string; password: string; name?: string; role?: string }) {
+    const email = (dto.email ?? '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new BadRequestException('Invalid email');
+    this.assertStrongPassword(dto.password);
+    if (await this.prisma.user.findUnique({ where: { email } })) throw new ConflictException('Email already registered');
+    return this.prisma.user.create({
+      data: { email, name: dto.name?.trim() || null, role: this.validRole(dto.role), passwordHash: this.hashPassword(dto.password) },
+      select: this.publicUser,
+    });
+  }
+
+  async updateUser(actorId: string, id: string, dto: { name?: string; role?: string; assignedAgentIds?: string[] }) {
+    if (dto.role !== undefined && id === actorId && dto.role !== 'admin') {
+      throw new BadRequestException('You cannot remove your own admin role');
+    }
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name.trim() || null }),
+        ...(dto.role !== undefined && { role: this.validRole(dto.role) }),
+        ...(Array.isArray(dto.assignedAgentIds) && { assignedAgentIds: dto.assignedAgentIds.map(String) }),
+      },
+      select: this.publicUser,
+    });
+  }
+
+  async adminResetPassword(id: string, newPassword: string) {
+    this.assertStrongPassword(newPassword);
+    await this.prisma.user.update({ where: { id }, data: { passwordHash: this.hashPassword(newPassword) } });
+    return { success: true };
+  }
+
+  async deleteUser(actorId: string, id: string) {
+    if (id === actorId) throw new BadRequestException('You cannot delete your own account');
+    await this.prisma.user.delete({ where: { id } });
+    return { success: true };
+  }
+
+  private validRole(role?: string): string {
+    return role === 'admin' ? 'admin' : 'operator';
   }
 
   isSessionToken(token: string): boolean {

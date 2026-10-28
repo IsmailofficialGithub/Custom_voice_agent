@@ -5,7 +5,9 @@
     { "title": "Chat", "href": "/playground", "icon": "Mic" },
     { "title": "Leads & Logs", "href": "/leads", "icon": "Users" },
     { "title": "Documents", "href": "/documents", "icon": "FileText" },
-    { "title": "Memory", "href": "/memory", "icon": "Brain" }
+    { "title": "Memory", "href": "/memory", "icon": "Brain" },
+    { "title": "Users", "href": "/users", "icon": "UserCog", "adminOnly": true },
+    { "title": "Settings", "href": "/settings", "icon": "Settings" }
   ],
   "visualizer": {
     "barCount": 32,

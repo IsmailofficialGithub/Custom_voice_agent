@@ -35,7 +35,7 @@ export function Header({ onToggleMenu }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex w-full items-center justify-between border-b border-[var(--border)] bg-[var(--bg-elevated)] px-3 sm:px-5 py-2.5 sm:py-3">
+    <header className="sticky top-0 z-30 flex w-full items-center justify-between border-b border-[var(--border)] bg-[var(--panel)] px-3 sm:px-5 py-2.5 sm:py-3">
       <div className="flex items-center gap-2.5 sm:gap-3">
         {onToggleMenu && (
           <button

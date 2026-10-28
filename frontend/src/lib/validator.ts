@@ -17,8 +17,9 @@ export function validateEmail(email: string): ValidationResult {
 }
 
 export function validatePassword(password: string): ValidationResult {
-  if (!password || password.length < 6) {
-    return { isValid: false, error: 'Password must be at least 6 characters long' };
+  // Mirrors AuthService.assertStrongPassword on the backend.
+  if (!password || password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    return { isValid: false, error: 'Password must be at least 8 characters and contain letters and numbers' };
   }
   return { isValid: true, sanitizedValue: password };
 }

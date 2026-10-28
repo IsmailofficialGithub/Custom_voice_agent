@@ -153,7 +153,7 @@ export default function LeadsAndCallLogsPage() {
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-zinc-800 border border-zinc-700 px-2.5 py-0.5 text-xs font-medium text-zinc-400">
+      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-hover)] border border-[var(--border)] px-2.5 py-0.5 text-xs font-medium text-[var(--text-muted)]">
         Not Interested
       </span>
     );
@@ -196,7 +196,7 @@ export default function LeadsAndCallLogsPage() {
               <Users className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-white">Leads & Call Logs</h1>
+              <h1 className="text-xl font-bold tracking-tight text-[var(--text)]">Leads & Call Logs</h1>
               <p className="text-xs text-[var(--text-muted)]">
                 Real-time extracted prospect intelligence, captured contacts, and call summaries
               </p>
@@ -217,64 +217,64 @@ export default function LeadsAndCallLogsPage() {
       {/* KPI Metric Cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-          <div className="flex items-center justify-between text-zinc-400 mb-2">
+          <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
             <span className="text-xs font-medium uppercase tracking-wider">Total Calls</span>
             <Phone className="h-4 w-4 text-emerald-400" />
           </div>
-          <p className="text-2xl font-bold text-white">{stats.totalCalls}</p>
-          <p className="text-[11px] text-zinc-500 mt-0.5">Recorded voice sessions</p>
+          <p className="text-2xl font-bold text-[var(--text)]">{stats.totalCalls}</p>
+          <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Recorded voice sessions</p>
         </div>
 
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-          <div className="flex items-center justify-between text-zinc-400 mb-2">
+          <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
             <span className="text-xs font-medium uppercase tracking-wider">Hot Leads</span>
             <Flame className="h-4 w-4 text-rose-400" />
           </div>
           <p className="text-2xl font-bold text-rose-400">{stats.hotLeads}</p>
-          <p className="text-[11px] text-zinc-500 mt-0.5">High buying intent</p>
+          <p className="text-[11px] text-[var(--text-muted)] mt-0.5">High buying intent</p>
         </div>
 
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-          <div className="flex items-center justify-between text-zinc-400 mb-2">
+          <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
             <span className="text-xs font-medium uppercase tracking-wider">Contacts Captured</span>
             <Mail className="h-4 w-4 text-blue-400" />
           </div>
           <p className="text-2xl font-bold text-blue-400">{stats.capturedContacts}</p>
-          <p className="text-[11px] text-zinc-500 mt-0.5">Emails or phone numbers</p>
+          <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Emails or phone numbers</p>
         </div>
 
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-          <div className="flex items-center justify-between text-zinc-400 mb-2">
+          <div className="flex items-center justify-between text-[var(--text-muted)] mb-2">
             <span className="text-xs font-medium uppercase tracking-wider">Avg Call Length</span>
             <Clock className="h-4 w-4 text-amber-400" />
           </div>
-          <p className="text-2xl font-bold text-white">{formatDuration(stats.avgDurationSeconds)}</p>
-          <p className="text-[11px] text-zinc-500 mt-0.5">Session duration</p>
+          <p className="text-2xl font-bold text-[var(--text)]">{formatDuration(stats.avgDurationSeconds)}</p>
+          <p className="text-[11px] text-[var(--text-muted)] mt-0.5">Session duration</p>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-[var(--text-muted)]" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by lead name, email, phone number, summary..."
-            className="w-full rounded-lg border border-[var(--border)] bg-zinc-950/70 pl-9 pr-3 py-2 text-xs text-white placeholder:text-zinc-500 focus:outline-none focus:border-zinc-500"
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] pl-9 pr-3 py-2 text-xs text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--border-strong)]"
           />
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+          <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
             <Filter className="h-3.5 w-3.5" />
             <span>Agent:</span>
           </div>
           <select
             value={selectedAgentId}
             onChange={(e) => setSelectedAgentId(e.target.value)}
-            className="rounded-lg border border-[var(--border)] bg-zinc-950/70 px-3 py-2 text-xs text-zinc-200 focus:outline-none"
+            className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text)] focus:outline-none"
           >
             <option value="all">All Agents</option>
             {agents.map((a) => (
@@ -284,13 +284,13 @@ export default function LeadsAndCallLogsPage() {
             ))}
           </select>
 
-          <div className="flex items-center gap-1.5 text-xs text-zinc-400 ml-2">
+          <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] ml-2">
             <span>Interest:</span>
           </div>
           <select
             value={selectedInterest}
             onChange={(e) => setSelectedInterest(e.target.value)}
-            className="rounded-lg border border-[var(--border)] bg-zinc-950/70 px-3 py-2 text-xs text-zinc-200 focus:outline-none"
+            className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text)] focus:outline-none"
           >
             <option value="all">All Interests</option>
             <option value="high">High (Hot)</option>
@@ -304,12 +304,12 @@ export default function LeadsAndCallLogsPage() {
       {/* Main Leads & Calls Data Table */}
       <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-lg">
         {loading ? (
-          <div className="p-12 text-center text-sm text-zinc-400">Loading call records & leads…</div>
+          <div className="p-12 text-center text-sm text-[var(--text-muted)]">Loading call records & leads…</div>
         ) : filteredLogs.length === 0 ? (
           <div className="p-12 text-center">
-            <FileSpreadsheet className="mx-auto h-8 w-8 text-zinc-600 mb-2" />
-            <h3 className="text-sm font-semibold text-zinc-300">No Call Logs Found</h3>
-            <p className="mt-1 text-xs text-zinc-500">
+            <FileSpreadsheet className="mx-auto h-8 w-8 text-[var(--text-faint)] mb-2" />
+            <h3 className="text-sm font-semibold text-[var(--text)]">No Call Logs Found</h3>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
               {logs.length === 0
                 ? 'Make your first voice call in the Chat tab to start generating leads and transcripts.'
                 : 'No calls match your active filter criteria.'}
@@ -318,7 +318,7 @@ export default function LeadsAndCallLogsPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="border-b border-[var(--border)] bg-zinc-950/50 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+              <thead className="border-b border-[var(--border)] bg-[var(--surface)] text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                 <tr>
                   <th className="px-4 py-3.5">Date & Duration</th>
                   <th className="px-4 py-3.5">Agent</th>
@@ -329,7 +329,7 @@ export default function LeadsAndCallLogsPage() {
                   <th className="px-4 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--border)] text-zinc-200">
+              <tbody className="divide-y divide-[var(--border)] text-[var(--text)]">
                 {filteredLogs.map((log) => {
                   const summary = log.callSummary;
                   return (
@@ -339,22 +339,22 @@ export default function LeadsAndCallLogsPage() {
                       className="cursor-pointer transition hover:bg-white/[0.03]"
                     >
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="font-medium text-white">{formatDate(log.startedAt)}</div>
-                        <div className="text-[11px] text-zinc-400 mt-0.5">
+                        <div className="font-medium text-[var(--text)]">{formatDate(log.startedAt)}</div>
+                        <div className="text-[11px] text-[var(--text-muted)] mt-0.5">
                           {formatDuration(log.durationSeconds)} · {log.messageCount || 0} turns
                         </div>
                       </td>
 
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-zinc-900 px-2.5 py-0.5 text-xs text-zinc-200">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-0.5 text-xs text-[var(--text)]">
                           <Bot className="h-3 w-3 text-emerald-400" />
                           {log.agentName || 'Agent'}
                         </span>
                       </td>
 
                       <td className="px-4 py-3">
-                        <div className="font-semibold text-white">
-                          {summary?.leadName || <span className="text-zinc-500 italic">Anonymous</span>}
+                        <div className="font-semibold text-[var(--text)]">
+                          {summary?.leadName || <span className="text-[var(--text-muted)] italic">Anonymous</span>}
                         </div>
                         <div className="mt-1 flex flex-col gap-0.5 text-[11px]">
                           {summary?.leadEmail && (
@@ -371,14 +371,14 @@ export default function LeadsAndCallLogsPage() {
                             <a
                               href={`tel:${summary.leadPhone}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="inline-flex items-center gap-1 text-zinc-300 hover:underline"
+                              className="inline-flex items-center gap-1 text-[var(--text)] hover:underline"
                             >
                               <Phone className="h-3 w-3" />
                               {summary.leadPhone}
                             </a>
                           )}
                           {!summary?.leadEmail && !summary?.leadPhone && (
-                            <span className="text-zinc-500 italic">No contact details</span>
+                            <span className="text-[var(--text-muted)] italic">No contact details</span>
                           )}
                         </div>
                       </td>
@@ -388,11 +388,11 @@ export default function LeadsAndCallLogsPage() {
                       </td>
 
                       <td className="px-4 py-3 max-w-[140px] truncate">
-                        <span className="text-zinc-300">{summary?.productPitched || 'Sales Offer'}</span>
+                        <span className="text-[var(--text)]">{summary?.productPitched || 'Sales Offer'}</span>
                       </td>
 
                       <td className="px-4 py-3 max-w-xs truncate">
-                        <p className="line-clamp-2 text-zinc-300" title={summary?.summary || ''}>
+                        <p className="line-clamp-2 text-[var(--text)]" title={summary?.summary || ''}>
                           {summary?.summary || 'Call logged'}
                         </p>
                       </td>
@@ -404,7 +404,7 @@ export default function LeadsAndCallLogsPage() {
                             e.stopPropagation();
                             openCallDetails(log);
                           }}
-                          className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] bg-zinc-900/60 px-2.5 py-1 text-xs font-medium text-zinc-300 hover:bg-zinc-800 hover:text-white transition"
+                          className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition"
                         >
                           <span>Details</span>
                           <ChevronRight className="h-3 w-3" />
@@ -422,18 +422,18 @@ export default function LeadsAndCallLogsPage() {
       {/* Detailed Call & Verbatim Transcript Modal */}
       {activeCall && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border border-zinc-700 bg-zinc-900 shadow-2xl overflow-hidden">
+          <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-4 bg-zinc-950/40">
+            <div className="flex items-center justify-between border-b border-[var(--border)] px-6 py-4 bg-[var(--surface)]">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
                   <FileSpreadsheet className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">
+                  <h3 className="text-base font-bold text-[var(--text)]">
                     {activeCall.title || 'Call Details'}
                   </h3>
-                  <p className="text-xs text-zinc-400">
+                  <p className="text-xs text-[var(--text-muted)]">
                     {formatDate(activeCall.startedAt)} · Agent: {activeCall.agentName || 'Agent'} · Duration:{' '}
                     {formatDuration(activeCall.durationSeconds)}
                   </p>
@@ -442,7 +442,7 @@ export default function LeadsAndCallLogsPage() {
               <button
                 type="button"
                 onClick={closeCallDetails}
-                className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-white transition"
+                className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -451,22 +451,22 @@ export default function LeadsAndCallLogsPage() {
             {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Lead Summary Table */}
-              <div className="rounded-xl border border-white/10 bg-zinc-950/60 overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 bg-zinc-900/80 border-b border-white/10">
-                  <span className="font-semibold text-xs text-zinc-200">Extracted Lead Information</span>
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface)] border-b border-[var(--border)]">
+                  <span className="font-semibold text-xs text-[var(--text)]">Extracted Lead Information</span>
                   {interestBadge(activeCall.callSummary?.leadInterest)}
                 </div>
                 <table className="w-full text-xs">
                   <tbody className="divide-y divide-white/5">
                     <tr>
-                      <td className="w-48 px-4 py-2.5 font-medium text-zinc-400 bg-zinc-900/40">Lead Name</td>
-                      <td className="px-4 py-2.5 font-semibold text-white">
-                        {activeCall.callSummary?.leadName || <span className="text-zinc-500 italic">Not stated</span>}
+                      <td className="w-48 px-4 py-2.5 font-medium text-[var(--text-muted)] bg-[var(--surface)]">Lead Name</td>
+                      <td className="px-4 py-2.5 font-semibold text-[var(--text)]">
+                        {activeCall.callSummary?.leadName || <span className="text-[var(--text-muted)] italic">Not stated</span>}
                       </td>
                     </tr>
                     <tr>
-                      <td className="w-48 px-4 py-2.5 font-medium text-zinc-400 bg-zinc-900/40">Email</td>
-                      <td className="px-4 py-2.5 text-white">
+                      <td className="w-48 px-4 py-2.5 font-medium text-[var(--text-muted)] bg-[var(--surface)]">Email</td>
+                      <td className="px-4 py-2.5 text-[var(--text)]">
                         {activeCall.callSummary?.leadEmail ? (
                           <a
                             href={`mailto:${activeCall.callSummary.leadEmail}`}
@@ -475,13 +475,13 @@ export default function LeadsAndCallLogsPage() {
                             {activeCall.callSummary.leadEmail}
                           </a>
                         ) : (
-                          <span className="text-zinc-500 italic">Not captured</span>
+                          <span className="text-[var(--text-muted)] italic">Not captured</span>
                         )}
                       </td>
                     </tr>
                     <tr>
-                      <td className="w-48 px-4 py-2.5 font-medium text-zinc-400 bg-zinc-900/40">Phone</td>
-                      <td className="px-4 py-2.5 text-white">
+                      <td className="w-48 px-4 py-2.5 font-medium text-[var(--text-muted)] bg-[var(--surface)]">Phone</td>
+                      <td className="px-4 py-2.5 text-[var(--text)]">
                         {activeCall.callSummary?.leadPhone ? (
                           <a
                             href={`tel:${activeCall.callSummary.leadPhone}`}
@@ -490,18 +490,18 @@ export default function LeadsAndCallLogsPage() {
                             {activeCall.callSummary.leadPhone}
                           </a>
                         ) : (
-                          <span className="text-zinc-500 italic">Not captured</span>
+                          <span className="text-[var(--text-muted)] italic">Not captured</span>
                         )}
                       </td>
                     </tr>
                     <tr>
-                      <td className="w-48 px-4 py-2.5 font-medium text-zinc-400 bg-zinc-900/40">Product Pitched</td>
-                      <td className="px-4 py-2.5 text-zinc-200">
+                      <td className="w-48 px-4 py-2.5 font-medium text-[var(--text-muted)] bg-[var(--surface)]">Product Pitched</td>
+                      <td className="px-4 py-2.5 text-[var(--text)]">
                         {activeCall.callSummary?.productPitched || 'Sales Offer'}
                       </td>
                     </tr>
                     <tr>
-                      <td className="w-48 px-4 py-2.5 font-medium text-zinc-400 bg-zinc-900/40">Next Steps</td>
+                      <td className="w-48 px-4 py-2.5 font-medium text-[var(--text-muted)] bg-[var(--surface)]">Next Steps</td>
                       <td className="px-4 py-2.5 font-medium text-emerald-300">
                         {activeCall.callSummary?.nextSteps || 'Follow up with prospect'}
                       </td>
@@ -512,11 +512,11 @@ export default function LeadsAndCallLogsPage() {
 
               {/* Executive Summary */}
               {activeCall.callSummary?.summary && (
-                <div className="rounded-xl border border-white/10 bg-zinc-950/40 p-4">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1.5">
                     Executive Summary
                   </h4>
-                  <p className="text-sm text-zinc-200 leading-relaxed">
+                  <p className="text-sm text-[var(--text)] leading-relaxed">
                     {activeCall.callSummary.summary}
                   </p>
                 </div>
@@ -524,13 +524,13 @@ export default function LeadsAndCallLogsPage() {
 
               {/* Verbatim Transcript */}
               <div className="space-y-3">
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                   Verbatim Call Transcript
                 </h4>
                 {loadingMessages ? (
-                  <p className="text-xs text-zinc-500 py-4 text-center">Loading transcript…</p>
+                  <p className="text-xs text-[var(--text-muted)] py-4 text-center">Loading transcript…</p>
                 ) : callMessages.length === 0 ? (
-                  <p className="text-xs text-zinc-500 py-4 text-center">No transcript messages recorded.</p>
+                  <p className="text-xs text-[var(--text-muted)] py-4 text-center">No transcript messages recorded.</p>
                 ) : (
                   <div className="space-y-2.5 max-h-72 overflow-y-auto pr-2">
                     {callMessages.map((m, idx) => (
@@ -541,11 +541,11 @@ export default function LeadsAndCallLogsPage() {
                         <div
                           className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
                             m.role === 'user'
-                              ? 'bg-zinc-800 text-white'
-                              : 'bg-zinc-950 border border-white/10 text-zinc-200'
+                              ? 'bg-[var(--surface-hover)] text-[var(--text)]'
+                              : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text)]'
                           }`}
                         >
-                          <span className="block font-semibold text-[10px] text-zinc-400 mb-0.5">
+                          <span className="block font-semibold text-[10px] text-[var(--text-muted)] mb-0.5">
                             {m.role === 'user' ? 'Customer / Lead' : activeCall.agentName || 'Agent'}
                           </span>
                           <p>{m.content}</p>
@@ -558,7 +558,7 @@ export default function LeadsAndCallLogsPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-zinc-800 px-6 py-3 bg-zinc-950/40 flex justify-end">
+            <div className="border-t border-[var(--border)] px-6 py-3 bg-[var(--surface)] flex justify-end">
               <button
                 type="button"
                 onClick={closeCallDetails}

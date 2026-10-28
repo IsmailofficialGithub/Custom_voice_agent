@@ -17,6 +17,7 @@
   --warn: #eab308;
   --danger: #ef4444;
   --focus: #818cf8;
+  --panel: #181b21;
 }
 
 html.light, [data-theme="light"] {
@@ -26,15 +27,17 @@ html.light, [data-theme="light"] {
   --surface-hover: #f1f5f9;
   --border: #e2e8f0;
   --border-strong: #cbd5e1;
-  --text: #0f172a;
-  --text-muted: #64748b;
-  --text-faint: #94a3b8;
+  --text: #000000;
+  --text-muted: #334155;
+  --text-faint: #64748b;
   --accent: #4f46e5;
   --accent-fg: #ffffff;
   --ok: #16a34a;
   --warn: #ca8a04;
   --danger: #dc2626;
   --focus: #6366f1;
+  /* Sidebar + header: tinted so they read as distinct from the white main area */
+  --panel: #e8edf5;
 }
 
 @theme inline {
@@ -54,7 +57,7 @@ html {
 body {
   background-color: var(--bg);
   color: var(--text);
-  font-family: var(--font-sans);
+  font-family: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   font-feature-settings: "ss01" on, "kern" on;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
@@ -203,4 +206,9 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border-strong);
+}
+
+/* Form controls don't inherit the page font by default */
+button, input, select, textarea {
+  font-family: inherit;
 }

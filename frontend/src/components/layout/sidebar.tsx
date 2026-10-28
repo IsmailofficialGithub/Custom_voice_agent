@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../../context/auth-context';
 import uiConfig from '../../config/ui.json';
-import { LayoutDashboard, Bot, Mic, FileText, Brain, Users, X, LogOut } from 'lucide-react';
+import { LayoutDashboard, Bot, Mic, FileText, Brain, Users, UserCog, Settings, X, LogOut } from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   LayoutDashboard: <LayoutDashboard className="h-4 w-4" />,
@@ -14,6 +14,8 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Users: <Users className="h-4 w-4" />,
   FileText: <FileText className="h-4 w-4" />,
   Brain: <Brain className="h-4 w-4" />,
+  UserCog: <UserCog className="h-4 w-4" />,
+  Settings: <Settings className="h-4 w-4" />,
 };
 
 interface SidebarProps {
@@ -36,7 +38,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-full w-64 shrink-0 flex-col justify-between border-r border-[var(--border)] bg-[var(--bg-elevated)] p-4 transition-transform duration-200 ease-in-out md:static md:w-56 md:translate-x-0 md:p-3 overflow-y-auto ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-full w-64 shrink-0 flex-col justify-between border-r border-[var(--border)] bg-[var(--panel)] p-4 transition-transform duration-200 ease-in-out md:static md:w-56 md:translate-x-0 md:p-3 overflow-y-auto ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -54,7 +56,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           <nav className="space-y-0.5">
             <p className="ui-label px-2.5 pt-1">Menu</p>
-            {uiConfig.navigation.map((item) => {
+            {uiConfig.navigation.filter((item) => !('adminOnly' in item && item.adminOnly) || currentUser.role === 'admin').map((item) => {
               const isActive = pathname === item.href;
               const icon = ICON_MAP[item.icon] || <Bot className="h-4 w-4" />;
 

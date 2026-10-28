@@ -95,7 +95,7 @@ function CompletedConversationView({
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-zinc-800 border border-zinc-700 px-2.5 py-0.5 text-xs font-medium text-zinc-400">
+      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-hover)] border border-[var(--border)] px-2.5 py-0.5 text-xs font-medium text-[var(--text-muted)]">
         Not Interested
       </span>
     );
@@ -127,57 +127,57 @@ function CompletedConversationView({
       </div>
 
       {/* Summary & Leads Intelligence Table Card */}
-      <div className="rounded-2xl border border-white/10 bg-zinc-900/60 backdrop-blur-xl p-6 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
+      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] backdrop-blur-xl p-6 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-[var(--border)] pb-4 mb-4">
           <div className="flex items-center gap-2.5">
             <FileSpreadsheet className="h-5 w-5 text-emerald-400" />
-            <h2 className="text-base font-semibold text-white">Call Summary & Lead Details</h2>
+            <h2 className="text-base font-semibold text-[var(--text)]">Call Summary & Lead Details</h2>
           </div>
           {summary && interestBadge(summary.leadInterest)}
         </div>
 
         {loading ? (
-          <p className="text-sm text-zinc-400 py-6 text-center">Analyzing call transcript & extracting lead data…</p>
+          <p className="text-sm text-[var(--text-muted)] py-6 text-center">Analyzing call transcript & extracting lead data…</p>
         ) : summary ? (
           <div className="space-y-6">
             {/* Structured Table */}
-            <div className="overflow-hidden rounded-xl border border-white/10">
+            <div className="overflow-hidden rounded-xl border border-[var(--border)]">
               <table className="w-full text-left text-xs">
-                <tbody className="divide-y divide-white/5 bg-zinc-950/50">
+                <tbody className="divide-y divide-white/5 bg-[var(--surface)]">
                   <tr className="hover:bg-white/[0.02]">
-                    <td className="w-48 px-4 py-3 font-semibold text-zinc-400 bg-zinc-900/40">Customer / Lead Name</td>
-                    <td className="px-4 py-3 font-medium text-white">{summary.leadName || <span className="text-zinc-500 italic">Not provided</span>}</td>
+                    <td className="w-48 px-4 py-3 font-semibold text-[var(--text-muted)] bg-[var(--surface)]">Customer / Lead Name</td>
+                    <td className="px-4 py-3 font-medium text-[var(--text)]">{summary.leadName || <span className="text-[var(--text-muted)] italic">Not provided</span>}</td>
                   </tr>
                   <tr className="hover:bg-white/[0.02]">
-                    <td className="w-48 px-4 py-3 font-semibold text-zinc-400 bg-zinc-900/40">Email Address</td>
-                    <td className="px-4 py-3 font-medium text-white">
+                    <td className="w-48 px-4 py-3 font-semibold text-[var(--text-muted)] bg-[var(--surface)]">Email Address</td>
+                    <td className="px-4 py-3 font-medium text-[var(--text)]">
                       {summary.leadEmail ? (
                         <a href={`mailto:${summary.leadEmail}`} className="text-emerald-400 hover:underline">{summary.leadEmail}</a>
                       ) : (
-                        <span className="text-zinc-500 italic">Not provided</span>
+                        <span className="text-[var(--text-muted)] italic">Not provided</span>
                       )}
                     </td>
                   </tr>
                   <tr className="hover:bg-white/[0.02]">
-                    <td className="w-48 px-4 py-3 font-semibold text-zinc-400 bg-zinc-900/40">Phone Number</td>
-                    <td className="px-4 py-3 font-medium text-white">
+                    <td className="w-48 px-4 py-3 font-semibold text-[var(--text-muted)] bg-[var(--surface)]">Phone Number</td>
+                    <td className="px-4 py-3 font-medium text-[var(--text)]">
                       {summary.leadPhone ? (
                         <a href={`tel:${summary.leadPhone}`} className="text-emerald-400 hover:underline">{summary.leadPhone}</a>
                       ) : (
-                        <span className="text-zinc-500 italic">Not provided</span>
+                        <span className="text-[var(--text-muted)] italic">Not provided</span>
                       )}
                     </td>
                   </tr>
                   <tr className="hover:bg-white/[0.02]">
-                    <td className="w-48 px-4 py-3 font-semibold text-zinc-400 bg-zinc-900/40">Interest Level</td>
+                    <td className="w-48 px-4 py-3 font-semibold text-[var(--text-muted)] bg-[var(--surface)]">Interest Level</td>
                     <td className="px-4 py-3 font-medium">{interestBadge(summary.leadInterest)}</td>
                   </tr>
                   <tr className="hover:bg-white/[0.02]">
-                    <td className="w-48 px-4 py-3 font-semibold text-zinc-400 bg-zinc-900/40">Product Pitched</td>
-                    <td className="px-4 py-3 text-zinc-200">{summary.productPitched || 'Product sales pitch'}</td>
+                    <td className="w-48 px-4 py-3 font-semibold text-[var(--text-muted)] bg-[var(--surface)]">Product Pitched</td>
+                    <td className="px-4 py-3 text-[var(--text)]">{summary.productPitched || 'Product sales pitch'}</td>
                   </tr>
                   <tr className="hover:bg-white/[0.02]">
-                    <td className="w-48 px-4 py-3 font-semibold text-zinc-400 bg-zinc-900/40">Recommended Next Steps</td>
+                    <td className="w-48 px-4 py-3 font-semibold text-[var(--text-muted)] bg-[var(--surface)]">Recommended Next Steps</td>
                     <td className="px-4 py-3 text-emerald-300 font-medium">{summary.nextSteps || 'Follow up with lead'}</td>
                   </tr>
                 </tbody>
@@ -185,29 +185,29 @@ function CompletedConversationView({
             </div>
 
             {/* Executive Summary */}
-            <div className="rounded-xl border border-white/5 bg-zinc-950/40 p-4">
-              <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">Executive Summary</h4>
-              <p className="text-sm text-zinc-200 leading-relaxed">{summary.summary}</p>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+              <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">Executive Summary</h4>
+              <p className="text-sm text-[var(--text)] leading-relaxed">{summary.summary}</p>
             </div>
           </div>
         ) : (
-          <p className="text-xs text-zinc-500 py-4 text-center">No summary data available for this call.</p>
+          <p className="text-xs text-[var(--text-muted)] py-4 text-center">No summary data available for this call.</p>
         )}
       </div>
 
       {/* Transcript Card */}
       {messages.length > 0 && (
-        <div className="rounded-2xl border border-white/10 bg-zinc-900/40 backdrop-blur-xl p-6 shadow-xl">
-          <h3 className="text-sm font-semibold text-white mb-4">Verbatim Conversation Transcript ({messages.length} turns)</h3>
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] backdrop-blur-xl p-6 shadow-xl">
+          <h3 className="text-sm font-semibold text-[var(--text)] mb-4">Verbatim Conversation Transcript ({messages.length} turns)</h3>
           <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
             {messages.map((m, idx) => (
               <div key={idx} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div
                   className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
-                    m.role === 'user' ? 'bg-zinc-800 text-white' : 'bg-zinc-900 border border-white/10 text-zinc-200'
+                    m.role === 'user' ? 'bg-[var(--surface-hover)] text-[var(--text)]' : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text)]'
                   }`}
                 >
-                  <span className="block font-semibold text-[10px] text-zinc-400 mb-0.5">
+                  <span className="block font-semibold text-[10px] text-[var(--text-muted)] mb-0.5">
                     {m.role === 'user' ? 'Lead / Customer' : agentName}
                   </span>
                   <p>{m.content}</p>
@@ -512,10 +512,10 @@ function PlaygroundContent() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-black text-white">
+    <div className="flex h-screen overflow-hidden bg-[var(--bg)] text-[var(--text)]">
       {/* Sidebar */}
       <aside
-        className={`flex shrink-0 flex-col border-r border-zinc-800/80 bg-[#171717] transition-all duration-200 ${sidebarOpen ? 'w-[260px]' : 'w-0 overflow-hidden border-0'
+        className={`flex shrink-0 flex-col border-r border-[var(--border)] bg-[#171717] transition-all duration-200 ${sidebarOpen ? 'w-[260px]' : 'w-0 overflow-hidden border-0'
           }`}
       >
         <div className="flex items-center gap-2 p-3">
@@ -531,7 +531,7 @@ function PlaygroundContent() {
           <button
             type="button"
             onClick={openNewChatModal}
-            className="rounded-xl border border-white/10 bg-zinc-800/80 p-2.5 text-zinc-300 hover:bg-zinc-700 hover:text-white transition"
+            className="rounded-xl border border-[var(--border)] bg-[var(--surface-hover)] p-2.5 text-[var(--text)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition"
             title="Custom chat settings"
           >
             <SquarePen className="h-3.5 w-3.5" />
@@ -540,13 +540,13 @@ function PlaygroundContent() {
 
         <div className="px-3 pb-3">
           <div className="flex items-center justify-between px-1 mb-1.5">
-            <label className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+            <label className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
               Agent
             </label>
             <button
               type="button"
               onClick={openCreateAgentModal}
-              className="flex items-center gap-1 text-[11px] font-medium text-zinc-400 hover:text-white transition"
+              className="flex items-center gap-1 text-[11px] font-medium text-[var(--text-muted)] hover:text-[var(--text)] transition"
               title="Create new agent"
             >
               <Plus className="h-3 w-3" />
@@ -557,7 +557,7 @@ function PlaygroundContent() {
             <button
               type="button"
               onClick={openCreateAgentModal}
-              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-zinc-700 bg-zinc-900/60 px-3 py-2 text-xs font-medium text-zinc-300 hover:border-zinc-500 hover:bg-zinc-800 hover:text-white transition"
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition"
             >
               <Plus className="h-3.5 w-3.5" />
               Create agent
@@ -566,7 +566,7 @@ function PlaygroundContent() {
             <select
               value={selectedAgentId}
               onChange={(e) => setSelectedAgentId(e.target.value)}
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 focus:outline-none"
+              className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text)] focus:outline-none"
             >
               {agents.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -578,13 +578,13 @@ function PlaygroundContent() {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
-          <p className="px-3 pb-2 pt-1 text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+          <p className="px-3 pb-2 pt-1 text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
             Recents
           </p>
           {loadingChats ? (
-            <p className="px-3 py-4 text-xs text-zinc-500">Loading…</p>
+            <p className="px-3 py-4 text-xs text-[var(--text-muted)]">Loading…</p>
           ) : conversations.length === 0 ? (
-            <p className="px-3 py-4 text-xs text-zinc-500">No chats yet</p>
+            <p className="px-3 py-4 text-xs text-[var(--text-muted)]">No chats yet</p>
           ) : (
             <div className="space-y-0.5">
               {conversations.map((chat) => {
@@ -592,18 +592,18 @@ function PlaygroundContent() {
                 return (
                   <div
                     key={chat.id}
-                    className={`group flex items-center gap-1 rounded-lg ${active ? 'bg-zinc-800' : 'hover:bg-zinc-800/70'
+                    className={`group flex items-center gap-1 rounded-lg ${active ? 'bg-[var(--surface-hover)]' : 'hover:bg-[var(--surface-hover)]'
                       }`}
                   >
                     <button
                       type="button"
                       onClick={() => openChat(chat)}
-                      className="min-w-0 flex-1 truncate px-3 py-2 text-left text-sm text-zinc-200 flex items-center justify-between"
+                      className="min-w-0 flex-1 truncate px-3 py-2 text-left text-sm text-[var(--text)] flex items-center justify-between"
                       title={chat.contextPrompt || chat.title || ''}
                     >
                       <span className="truncate">{chat.title || 'Untitled chat'}</span>
                       {chat.endedAt && (
-                        <span className="ml-1.5 shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium bg-zinc-700/60 text-zinc-400">
+                        <span className="ml-1.5 shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium bg-[var(--surface-hover)] text-[var(--text-muted)]">
                           Ended
                         </span>
                       )}
@@ -611,7 +611,7 @@ function PlaygroundContent() {
                     <button
                       type="button"
                       onClick={(e) => deleteChat(e, chat)}
-                      className="mr-1 rounded-md p-1.5 text-zinc-500 opacity-0 transition hover:bg-zinc-700 hover:text-zinc-200 group-hover:opacity-100"
+                      className="mr-1 rounded-md p-1.5 text-[var(--text-muted)] opacity-0 transition hover:bg-[var(--surface-hover)] hover:text-[var(--text)] group-hover:opacity-100"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -622,10 +622,10 @@ function PlaygroundContent() {
           )}
         </div>
 
-        <div className="border-t border-zinc-800 p-3 space-y-1">
+        <div className="border-t border-[var(--border)] p-3 space-y-1">
           <Link
             href="/leads"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--text-muted)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
           >
             <Users className="h-4 w-4" />
             Leads & Call logs
@@ -633,7 +633,7 @@ function PlaygroundContent() {
           {selectedAgentId && (
             <Link
               href={`/documents?agentId=${selectedAgentId}`}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--text-muted)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
             >
               <FileText className="h-4 w-4" />
               Manage docs
@@ -641,7 +641,7 @@ function PlaygroundContent() {
           )}
           <Link
             href="/"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--text-muted)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
           >
             <LayoutDashboard className="h-4 w-4" />
             Back to studio
@@ -650,24 +650,24 @@ function PlaygroundContent() {
       </aside>
 
       {/* Main */}
-      <div className="relative flex min-w-0 flex-1 flex-col bg-black">
+      <div className="relative flex min-w-0 flex-1 flex-col bg-[var(--bg)]">
         <header className="flex h-14 shrink-0 items-center justify-between px-3 md:px-4">
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setSidebarOpen((v) => !v)}
-              className="rounded-lg p-2 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
+              className="rounded-lg p-2 text-[var(--text-muted)] transition hover:bg-[var(--surface)] hover:text-[var(--text)]"
               aria-label="Toggle sidebar"
             >
               <PanelLeft className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2.5">
-              <span className="text-sm font-semibold tracking-tight text-zinc-100">
+              <span className="text-sm font-semibold tracking-tight text-[var(--text)]">
                 {activeConversation?.title || 'Axiomra Voice'}
               </span>
               {selectedAgent && (
                 <div className="hidden items-center gap-2 sm:inline-flex">
-                  <span className="items-center gap-1.5 rounded-full border border-white/10 bg-zinc-900/80 px-2.5 py-0.5 text-[11px] font-medium text-zinc-200 inline-flex shadow-sm">
+                  <span className="items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--text)] inline-flex shadow-sm">
                     <Bot className="h-3 w-3 text-emerald-400" />
                     {selectedAgent.name}
                   </span>
@@ -685,7 +685,7 @@ function PlaygroundContent() {
             <button
               type="button"
               onClick={closeChat}
-              className="rounded-xl border border-white/10 bg-zinc-900/80 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-500/30 shadow-sm"
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--text)] transition hover:bg-rose-500/20 hover:text-rose-300 hover:border-rose-500/30 shadow-sm"
             >
               Close chat
             </button>
@@ -694,9 +694,9 @@ function PlaygroundContent() {
 
         {activeConversation?.contextPrompt?.trim() && (
           <div className="mx-auto w-full max-w-3xl px-4 pb-2">
-            <div className="rounded-2xl border border-white/10 bg-zinc-900/60 backdrop-blur-md px-4 py-2.5 shadow-sm">
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] backdrop-blur-md px-4 py-2.5 shadow-sm">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">Context</p>
-              <p className="mt-0.5 line-clamp-2 text-xs text-zinc-300 leading-relaxed">{activeConversation.contextPrompt}</p>
+              <p className="mt-0.5 line-clamp-2 text-xs text-[var(--text)] leading-relaxed">{activeConversation.contextPrompt}</p>
             </div>
           </div>
         )}
@@ -724,13 +724,13 @@ function PlaygroundContent() {
             )
           ) : agents.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center px-4 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-zinc-900 text-zinc-300 shadow-2xl mb-4 ring-1 ring-white/5">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] shadow-2xl mb-4 ring-1 ring-white/5">
                 <Bot className="h-8 w-8 text-emerald-400" />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight text-white md:text-3xl">
+              <h1 className="text-2xl font-bold tracking-tight text-[var(--text)] md:text-3xl">
                 No Voice Agents Available
               </h1>
-              <p className="mt-2.5 max-w-md text-sm text-zinc-400">
+              <p className="mt-2.5 max-w-md text-sm text-[var(--text-muted)]">
                 To start chatting with realtime voice and testing tools in the playground, create your first agent now.
               </p>
               <button
@@ -749,10 +749,10 @@ function PlaygroundContent() {
                 <Bot className="h-3.5 w-3.5" />
                 <span>{selectedAgent?.name || 'Voice Agent'}</span>
               </div>
-              <h1 className="text-center text-3xl font-semibold tracking-tight text-white md:text-4xl">
+              <h1 className="text-center text-3xl font-semibold tracking-tight text-[var(--text)] md:text-4xl">
                 Ready to speak with {selectedAgent?.name || 'your agent'}?
               </h1>
-              <p className="mt-3 max-w-md text-center text-sm text-zinc-400 leading-relaxed">
+              <p className="mt-3 max-w-md text-center text-sm text-[var(--text-muted)] leading-relaxed">
                 Click below to start a live voice call directly based on {selectedAgent?.name || 'this agent'}&apos;s voice ({selectedAgent?.ttsVoice || 'alloy'}) and sales persona.
               </p>
               <button
@@ -764,7 +764,7 @@ function PlaygroundContent() {
                 <Phone className="h-4 w-4 fill-current" />
                 <span>{creating ? 'Connecting Call…' : `Start Call with ${selectedAgent?.name || 'Agent'}`}</span>
               </button>
-              <div className="mt-6 flex items-center gap-2 rounded-full border border-white/5 bg-zinc-900/40 px-4 py-1.5 text-xs text-zinc-500 backdrop-blur-sm">
+              <div className="mt-6 flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-1.5 text-xs text-[var(--text-muted)] backdrop-blur-sm">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 Call connects instantly with zero setup
               </div>
@@ -776,43 +776,43 @@ function PlaygroundContent() {
       {/* New chat modal */}
       {showNewChatModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-zinc-700 bg-zinc-900 p-5 shadow-2xl">
+          <div className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">New chat</h3>
+              <h3 className="text-lg font-semibold text-[var(--text)]">New chat</h3>
               <button
                 type="button"
                 onClick={() => setShowNewChatModal(false)}
-                className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <label className="block text-xs font-medium text-zinc-400">
+            <label className="block text-xs font-medium text-[var(--text-muted)]">
               Chat name
               <input
                 type="text"
                 value={newChatName}
                 onChange={(e) => setNewChatName(e.target.value)}
                 placeholder="e.g. Interview practice"
-                className="mt-1.5 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none"
+                className="mt-1.5 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-faint)] focus:border-[var(--border-strong)] focus:outline-none"
                 autoFocus
               />
             </label>
 
-            <label className="mt-4 block text-xs font-medium text-zinc-400">
+            <label className="mt-4 block text-xs font-medium text-[var(--text-muted)]">
               Context prompt
               <textarea
                 value={newChatContext}
                 onChange={(e) => setNewChatContext(e.target.value)}
                 placeholder="Optional instructions for this chat only…"
                 rows={4}
-                className="mt-1.5 w-full resize-y rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none"
+                className="mt-1.5 w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-faint)] focus:border-[var(--border-strong)] focus:outline-none"
               />
             </label>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <label className="block text-xs font-medium text-zinc-400">
+              <label className="block text-xs font-medium text-[var(--text-muted)]">
                 Voice gender
                 <select
                   value={newChatGender}
@@ -824,14 +824,14 @@ function PlaygroundContent() {
                       setNewChatVoice(DEFAULT_VOICE_BY_GENDER[g]);
                     }
                   }}
-                  className="mt-1.5 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white focus:border-zinc-500 focus:outline-none"
+                  className="mt-1.5 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--text)] focus:border-[var(--border-strong)] focus:outline-none"
                 >
                   <option value="neutral">Neutral</option>
                   <option value="female">Female</option>
                   <option value="male">Male</option>
                 </select>
               </label>
-              <label className="block text-xs font-medium text-zinc-400">
+              <label className="block text-xs font-medium text-[var(--text-muted)]">
                 TTS voice
                 <select
                   value={newChatVoice}
@@ -840,7 +840,7 @@ function PlaygroundContent() {
                     setNewChatVoice(v);
                     setNewChatGender(genderForVoice(v));
                   }}
-                  className="mt-1.5 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3 py-2.5 text-sm text-white focus:border-zinc-500 focus:outline-none"
+                  className="mt-1.5 w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--text)] focus:border-[var(--border-strong)] focus:outline-none"
                 >
                   {voicesForGender(newChatGender || 'neutral').map((v) => (
                     <option key={v.id} value={v.id}>
@@ -855,7 +855,7 @@ function PlaygroundContent() {
               <button
                 type="button"
                 onClick={() => setShowNewChatModal(false)}
-                className="rounded-xl px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
+                className="rounded-xl px-4 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)]"
               >
                 Cancel
               </button>
@@ -875,21 +875,21 @@ function PlaygroundContent() {
       {/* Create Agent Modal */}
       {showCreateAgentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl border border-zinc-700 bg-zinc-900 p-6 shadow-2xl">
-            <div className="mb-5 flex items-center justify-between border-b border-zinc-800 pb-3">
+          <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between border-b border-[var(--border)] pb-3">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-800 text-white">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--surface-hover)] text-[var(--text)]">
                   <Bot className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-white">Create Voice Agent</h3>
-                  <p className="text-xs text-zinc-400">Configure a new agent to chat with immediately</p>
+                  <h3 className="text-base font-semibold text-[var(--text)]">Create Voice Agent</h3>
+                  <p className="text-xs text-[var(--text-muted)]">Configure a new agent to chat with immediately</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowCreateAgentModal(false)}
-                className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                className="rounded-lg p-2 text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -903,7 +903,7 @@ function PlaygroundContent() {
                     <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
                     <span>Choose from 10 Best Ready-Made Agent Templates</span>
                   </label>
-                  <span className="text-[10px] text-zinc-400">Auto-fills prompt & settings</span>
+                  <span className="text-[10px] text-[var(--text-muted)]">Auto-fills prompt & settings</span>
                 </div>
                 <select
                   onChange={(e) => {
@@ -922,7 +922,7 @@ function PlaygroundContent() {
                     }
                   }}
                   defaultValue=""
-                  className="w-full rounded-lg border border-emerald-500/40 bg-zinc-900 px-3 py-2 text-xs font-medium text-white focus:outline-none focus:border-emerald-400"
+                  className="w-full rounded-lg border border-emerald-500/40 bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text)] focus:outline-none focus:border-emerald-400"
                 >
                   <option value="" disabled>
                     -- Select an Agent Template (e.g. Hospital Receptionist, Sales Executive) --
@@ -936,31 +936,31 @@ function PlaygroundContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">Agent Name</label>
+                <label className="block text-xs font-medium text-[var(--text)] mb-1">Agent Name</label>
                 <input
                   type="text"
                   required
                   value={newAgentName}
                   onChange={(e) => setNewAgentName(e.target.value)}
                   placeholder="e.g. Sales Assistant, Tech Support"
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2 text-sm text-[var(--text)] placeholder-zinc-500 focus:border-[var(--border-strong)] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">System Instructions / Prompt</label>
+                <label className="block text-xs font-medium text-[var(--text)] mb-1">System Instructions / Prompt</label>
                 <textarea
                   rows={3}
                   value={newAgentPrompt}
                   onChange={(e) => setNewAgentPrompt(e.target.value)}
                   placeholder="Describe agent personality and rules..."
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none resize-none"
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2 text-sm text-[var(--text)] placeholder-zinc-500 focus:border-[var(--border-strong)] focus:outline-none resize-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-zinc-300 mb-1">LLM Provider</label>
+                  <label className="block text-xs font-medium text-[var(--text)] mb-1">LLM Provider</label>
                   <select
                     value={newAgentProvider}
                     onChange={(e) => {
@@ -968,18 +968,18 @@ function PlaygroundContent() {
                       setNewAgentProvider(p);
                       setNewAgentModel(p === 'openai' ? 'gpt-4o' : 'claude-sonnet-4-5');
                     }}
-                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:outline-none"
+                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2 text-sm text-[var(--text)] focus:outline-none"
                   >
                     <option value="openai">OpenAI</option>
                     <option value="claude">Anthropic Claude</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-zinc-300 mb-1">Model</label>
+                  <label className="block text-xs font-medium text-[var(--text)] mb-1">Model</label>
                   <select
                     value={newAgentModel}
                     onChange={(e) => setNewAgentModel(e.target.value)}
-                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:outline-none"
+                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2 text-sm text-[var(--text)] focus:outline-none"
                   >
                     {newAgentProvider === 'openai' ? (
                       <>
@@ -999,7 +999,7 @@ function PlaygroundContent() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-zinc-300 mb-1">Voice Gender</label>
+                  <label className="block text-xs font-medium text-[var(--text)] mb-1">Voice Gender</label>
                   <select
                     value={newAgentGender}
                     onChange={(e) => {
@@ -1007,7 +1007,7 @@ function PlaygroundContent() {
                       setNewAgentGender(g);
                       setNewAgentVoice(DEFAULT_VOICE_BY_GENDER[g]);
                     }}
-                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:outline-none"
+                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2 text-sm text-[var(--text)] focus:outline-none"
                   >
                     <option value="neutral">Neutral</option>
                     <option value="male">Male</option>
@@ -1015,11 +1015,11 @@ function PlaygroundContent() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-zinc-300 mb-1">TTS Voice</label>
+                  <label className="block text-xs font-medium text-[var(--text)] mb-1">TTS Voice</label>
                   <select
                     value={newAgentVoice}
                     onChange={(e) => setNewAgentVoice(e.target.value as TtsVoiceId)}
-                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white focus:outline-none"
+                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2 text-sm text-[var(--text)] focus:outline-none"
                   >
                     {voicesForGender(newAgentGender).map((v) => (
                       <option key={v.id} value={v.id}>
@@ -1031,7 +1031,7 @@ function PlaygroundContent() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1.5">Enabled Capabilities / Tools</label>
+                <label className="block text-xs font-medium text-[var(--text)] mb-1.5">Enabled Capabilities / Tools</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { id: 'web_search', label: 'Web Search' },
@@ -1044,8 +1044,8 @@ function PlaygroundContent() {
                         key={tool.id}
                         className={`flex items-center gap-2 rounded-lg border p-2 text-xs cursor-pointer transition ${
                           checked
-                            ? 'border-zinc-500 bg-zinc-800 text-white'
-                            : 'border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:border-zinc-700'
+                            ? 'border-[var(--border-strong)] bg-[var(--surface-hover)] text-[var(--text)]'
+                            : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border)]'
                         }`}
                       >
                         <input
@@ -1055,7 +1055,7 @@ function PlaygroundContent() {
                             if (e.target.checked) setNewAgentTools((t) => [...t, tool.id]);
                             else setNewAgentTools((t) => t.filter((x) => x !== tool.id));
                           }}
-                          className="rounded border-zinc-700 text-white"
+                          className="rounded border-[var(--border)] text-[var(--text)]"
                         />
                         <span>{tool.label}</span>
                       </label>
@@ -1065,15 +1065,15 @@ function PlaygroundContent() {
               </div>
 
               {/* Start & End Lifecycle Trigger Phrases */}
-              <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3.5 space-y-3">
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-zinc-200">Voice Activation & End Triggers</label>
-                  <span className="text-[10px] text-zinc-400">Custom start & farewell words</span>
+                  <label className="text-xs font-semibold text-[var(--text)]">Voice Activation & End Triggers</label>
+                  <span className="text-[10px] text-[var(--text-muted)]">Custom start & farewell words</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-medium text-zinc-400 mb-1">
+                    <label className="block text-[11px] font-medium text-[var(--text-muted)] mb-1">
                       Start Message (Wake Phrase) <span className="text-amber-400">*</span>
                     </label>
                     <input
@@ -1082,13 +1082,13 @@ function PlaygroundContent() {
                       value={newAgentStartPhrase}
                       onChange={(e) => setNewAgentStartPhrase(e.target.value)}
                       placeholder="e.g. hey boss"
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2 text-sm text-[var(--text)] placeholder-zinc-500 focus:border-[var(--border-strong)] focus:outline-none"
                     />
-                    <p className="text-[10px] text-zinc-500 mt-1">Starts listening & working</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-1">Starts listening & working</p>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-medium text-zinc-400 mb-1">
+                    <label className="block text-[11px] font-medium text-[var(--text-muted)] mb-1">
                       End Message (Stop Phrase) <span className="text-rose-400">*</span>
                     </label>
                     <input
@@ -1097,14 +1097,14 @@ function PlaygroundContent() {
                       value={newAgentEndPhrase}
                       onChange={(e) => setNewAgentEndPhrase(e.target.value)}
                       placeholder="e.g. goodbye"
-                      className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2 text-sm text-[var(--text)] placeholder-zinc-500 focus:border-[var(--border-strong)] focus:outline-none"
                     />
-                    <p className="text-[10px] text-zinc-500 mt-1">Stops & closes call</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-1">Stops & closes call</p>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-medium text-zinc-400 mb-1">
+                  <label className="block text-[11px] font-medium text-[var(--text-muted)] mb-1">
                     Farewell Audio Message
                   </label>
                   <input
@@ -1112,17 +1112,17 @@ function PlaygroundContent() {
                     value={newAgentFarewellMessage}
                     onChange={(e) => setNewAgentFarewellMessage(e.target.value)}
                     placeholder="e.g. Goodbye! Talk to you soon."
-                    className="w-full rounded-lg border border-zinc-700 bg-zinc-800/80 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:border-zinc-500 focus:outline-none"
+                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-hover)] px-3 py-2 text-sm text-[var(--text)] placeholder-zinc-500 focus:border-[var(--border-strong)] focus:outline-none"
                   />
-                  <p className="text-[10px] text-zinc-500 mt-1">Spoken before session disconnects</p>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">Spoken before session disconnects</p>
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-end gap-2 pt-3 border-t border-zinc-800">
+              <div className="mt-6 flex justify-end gap-2 pt-3 border-t border-[var(--border)]">
                 <button
                   type="button"
                   onClick={() => setShowCreateAgentModal(false)}
-                  className="rounded-lg px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-800 hover:text-white transition"
+                  className="rounded-lg px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition"
                 >
                   Cancel
                 </button>
@@ -1146,7 +1146,7 @@ export default function VoicePlaygroundPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen items-center justify-center bg-black text-sm text-zinc-500">
+        <div className="flex h-screen items-center justify-center bg-[var(--bg)] text-sm text-[var(--text-muted)]">
           Loading…
         </div>
       }

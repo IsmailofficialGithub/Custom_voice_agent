@@ -1,9 +1,9 @@
 import {
-  Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, HttpCode, HttpStatus,
+  Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, HttpCode, HttpStatus, Req,
 } from '@nestjs/common';
 import { ConversationsService } from './conversations.service';
 import { OrchestratorService } from '../orchestrator/orchestrator.service';
-import { ApiKeyGuard } from '../auth/api-key.guard';
+import { ApiKeyGuard, AuthedRequest } from '../auth/api-key.guard';
 import { CreateConversationDto, SendMessageDto, UpdateConversationDto } from './conversations.dto';
 
 @UseGuards(ApiKeyGuard)
@@ -48,13 +48,13 @@ export class ConversationsController {
   }
 
   @Get('call-logs')
-  getCallLogsAll() {
-    return this.conversationsService.getCallLogs();
+  getCallLogsAll(@Req() req: AuthedRequest) {
+    return this.conversationsService.getCallLogs(undefined, this.scope(req));
   }
 
   @Get('conversations/logs')
-  getConversationsLogs() {
-    return this.conversationsService.getCallLogs();
+  getConversationsLogs(@Req() req: AuthedRequest) {
+    return this.conversationsService.getCallLogs(undefined, this.scope(req));
   }
 
   @Get('agents/:agentId/call-logs')
@@ -71,5 +71,9 @@ export class ConversationsController {
   @HttpCode(HttpStatus.OK)
   end(@Param('id') id: string) {
     return this.conversationsService.end(id);
+  }
+
+  private scope(req: AuthedRequest): string[] | undefined {
+    return req.user.role === 'admin' ? undefined : req.user.assignedAgentIds;
   }
 }

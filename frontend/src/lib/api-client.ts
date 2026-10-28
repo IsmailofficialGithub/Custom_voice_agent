@@ -75,6 +75,16 @@ export interface HealthCheck {
   timestamp: string;
 }
 
+export interface ManagedUser {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  isTwoFactorEnabled: boolean;
+  assignedAgentIds: string[];
+  createdAt: string;
+}
+
 async function fetchWithAuth<T>(path: string, options: RequestInit = {}, apiKey: string): Promise<T> {
   const url = `${BASE_URL}${path}`;
   const keyToUse = (apiKey || process.env.NEXT_PUBLIC_DEFAULT_API_KEY || '').trim();
@@ -155,6 +165,23 @@ export const apiClient = {
       { method: 'POST', body: JSON.stringify({ code }), headers: { 'Content-Type': 'application/json' } },
       apiKey,
     ),
+
+  changePassword: (body: { currentPassword: string; newPassword: string; twoFactorCode?: string }, apiKey: string) =>
+    fetchWithAuth<{ success: boolean }>(
+      '/auth/change-password',
+      { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } },
+      apiKey,
+    ),
+
+  // Users (admin)
+  getUsers: (apiKey: string) => fetchWithAuth<ManagedUser[]>('/users', {}, apiKey),
+  createUser: (data: { email: string; password: string; name?: string; role: string }, apiKey: string) =>
+    fetchWithAuth<ManagedUser>('/users', { method: 'POST', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }, apiKey),
+  updateUser: (id: string, data: { name?: string; role?: string; assignedAgentIds?: string[] }, apiKey: string) =>
+    fetchWithAuth<ManagedUser>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(data), headers: { 'Content-Type': 'application/json' } }, apiKey),
+  resetUserPassword: (id: string, password: string, apiKey: string) =>
+    fetchWithAuth<{ success: boolean }>(`/users/${id}/reset-password`, { method: 'POST', body: JSON.stringify({ password }), headers: { 'Content-Type': 'application/json' } }, apiKey),
+  deleteUser: (id: string, apiKey: string) => fetchWithAuth<{ success: boolean }>(`/users/${id}`, { method: 'DELETE' }, apiKey),
 
   // Health
   getHealth: (apiKey: string) => fetchWithAuth<HealthCheck>('/health', {}, apiKey),

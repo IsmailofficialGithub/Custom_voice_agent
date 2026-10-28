@@ -65,6 +65,8 @@ describe('VoiceGateway - Lifecycle & Start/End Phrases', () => {
 
     mockAuth = {
       isValidBearer: vi.fn().mockReturnValue(true),
+      resolveUser: vi.fn().mockResolvedValue({ id: 'u1', role: 'admin', assignedAgentIds: [] }),
+      canAccessAgent: vi.fn().mockReturnValue(true),
     };
 
     gateway = new VoiceGateway(

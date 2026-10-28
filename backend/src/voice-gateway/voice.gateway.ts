@@ -72,7 +72,8 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const conversationId = urlParams.get('conversationId') ?? match?.[1];
 
     const token = String(urlParams.get('apiKey') ?? req.headers['x-api-key'] ?? req.headers['authorization'] ?? '');
-    if (!this.authService.isValidBearer(token) || !conversationId) {
+    const user = await this.authService.resolveUser(token);
+    if (!user || !conversationId) {
       this.logger.warn(`WS rejected: conversationId="${conversationId}", tokenPresent=${Boolean(token)}`);
       this.send(client, { type: 'error', message: 'Unauthorized or missing conversation ID' });
       client.close(1008, 'Unauthorized');
@@ -85,6 +86,11 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       const conv = await this.conversations.getConversationWithAgent(conversationId);
+      if (!conv || !this.authService.canAccessAgent(user, conv.agentId)) {
+        this.send(client, { type: 'error', message: 'You do not have access to this agent' });
+        client.close(1008, 'Forbidden');
+        return;
+      }
       if (conv?.endedAt) {
         if (this.conversations?.markConnected) {
           await this.conversations.markConnected(conversationId);

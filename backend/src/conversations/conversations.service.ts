@@ -311,9 +311,9 @@ Output JSON format:
     return this.extractLeadHeuristic(messages);
   }
 
-  async getCallLogs(agentId?: string) {
+  async getCallLogs(agentId?: string, onlyAgentIds?: string[]) {
     const conversations = await this.prisma.conversation.findMany({
-      where: agentId ? { agentId } : {},
+      where: agentId ? { agentId } : onlyAgentIds ? { agentId: { in: onlyAgentIds } } : {},
       orderBy: { startedAt: 'desc' },
       include: {
         agent: { select: { id: true, name: true } },

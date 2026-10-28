@@ -23,8 +23,9 @@ export class AgentsService {
     });
   }
 
-  async findAll() {
+  async findAll(onlyIds?: string[]) {
     return this.prisma.agent.findMany({
+      where: onlyIds ? { id: { in: onlyIds } } : undefined,
       orderBy: { createdAt: 'desc' },
     });
   }

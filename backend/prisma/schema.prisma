@@ -112,6 +112,7 @@ model User {
   role               String   @default("admin")
   isTwoFactorEnabled Boolean  @default(false) @map("is_two_factor_enabled")
   twoFactorSecret    String?  @map("two_factor_secret")
+  assignedAgentIds   String[] @default([]) @map("assigned_agent_ids")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 

@@ -212,7 +212,7 @@ export default function AgentsPage() {
                       <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
                       <span>Choose from 10 Best Ready-Made Agent Templates</span>
                     </label>
-                    <span className="text-[10px] text-zinc-400">Auto-fills prompt & voice</span>
+                    <span className="text-[10px] text-[var(--text-muted)]">Auto-fills prompt & voice</span>
                   </div>
                   <select
                     onChange={(e) => {
@@ -228,7 +228,7 @@ export default function AgentsPage() {
                       }
                     }}
                     defaultValue=""
-                    className="w-full rounded-md border border-emerald-500/40 bg-[var(--bg-elevated)] px-2.5 py-1.5 text-xs font-medium text-white focus:outline-none"
+                    className="w-full rounded-md border border-emerald-500/40 bg-[var(--bg-elevated)] px-2.5 py-1.5 text-xs font-medium text-[var(--text)] focus:outline-none"
                   >
                     <option value="" disabled>
                       -- Select an Agent Template (e.g. Hospital Receptionist, Sales Executive) --

@@ -31,6 +31,17 @@ export class AuthController {
     return this.auth.getMe(token);
   }
 
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ApiKeyGuard)
+  changePassword(
+    @Headers('authorization') authHeader: string,
+    @Body() body: { currentPassword: string; newPassword: string; twoFactorCode?: string },
+  ) {
+    const token = (authHeader || '').replace(/^Bearer\s+/i, '').trim();
+    return this.auth.changePassword(token, body.currentPassword, body.newPassword, body.twoFactorCode);
+  }
+
   @Get('2fa/generate')
   @UseGuards(ApiKeyGuard)
   generateTwoFactor(@Headers('authorization') authHeader: string) {
