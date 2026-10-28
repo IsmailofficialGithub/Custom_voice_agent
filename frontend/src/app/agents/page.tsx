@@ -24,7 +24,8 @@ const TOOLS = [
 ] as const;
 
 export default function AgentsPage() {
-  const { apiKey, hasPermission } = useAuth();
+  const { apiKey, hasPermission, currentUser } = useAuth();
+  const isAdmin = currentUser.role === 'admin';
   const { showSuccess, showError } = useToast();
 
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -146,10 +147,12 @@ export default function AgentsPage() {
           <h1 className="ui-title">Agents</h1>
           <p className="ui-subtitle">Persona, model, voice, and tools for each agent.</p>
         </div>
-        <button type="button" onClick={openCreateModal} className="ui-btn ui-btn-primary self-start">
-          <Plus className="h-3.5 w-3.5" />
-          New agent
-        </button>
+        {isAdmin && (
+          <button type="button" onClick={openCreateModal} className="ui-btn ui-btn-primary self-start">
+            <Plus className="h-3.5 w-3.5" />
+            New agent
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -182,12 +185,16 @@ export default function AgentsPage() {
                 <Link href={`/documents?agentId=${agent.id}`} className="ui-btn ui-btn-ghost" title="Documents">
                   <FileText className="h-3.5 w-3.5" />
                 </Link>
-                <button type="button" onClick={() => openEditModal(agent)} className="ui-btn ui-btn-ghost" title="Edit">
-                  <Edit3 className="h-3.5 w-3.5" />
-                </button>
-                <button type="button" onClick={() => handleDelete(agent)} className="ui-btn ui-btn-ghost text-[var(--danger)]" title="Delete">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {isAdmin && (
+                  <>
+                    <button type="button" onClick={() => openEditModal(agent)} className="ui-btn ui-btn-ghost" title="Edit">
+                      <Edit3 className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onClick={() => handleDelete(agent)} className="ui-btn ui-btn-ghost text-[var(--danger)]" title="Delete">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </>
+                )}
               </div>
             </li>
           ))}

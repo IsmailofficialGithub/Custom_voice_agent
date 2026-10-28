@@ -61,10 +61,12 @@ export default function DashboardPage() {
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2.5">
-          <Link href="/agents" className="ui-btn ui-btn-primary">
-            <Plus className="h-4 w-4" />
-            Create Agent
-          </Link>
+          {currentUser.role === 'admin' && (
+            <Link href="/agents" className="ui-btn ui-btn-primary">
+              <Plus className="h-4 w-4" />
+              Create Agent
+            </Link>
+          )}
           <Link href="/playground" className="ui-btn ui-btn-ghost">
             <Mic className="h-4 w-4 text-[var(--accent)]" />
             Live Chat

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/auth-context';
 import { useToast } from '../../context/toast-context';
 import { apiClient } from '../../lib/api-client';
@@ -91,8 +92,9 @@ export function TwoFactorModal({ isOpen, onClose }: TwoFactorModalProps) {
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+  // Portal to body: inside the sticky header the overlay is trapped below the sidebar's z-index.
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-2xl space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
@@ -271,6 +273,7 @@ export function TwoFactorModal({ isOpen, onClose }: TwoFactorModalProps) {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

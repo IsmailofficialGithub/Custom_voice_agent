@@ -222,7 +222,8 @@ function CompletedConversationView({
 }
 
 function PlaygroundContent() {
-  const { apiKey } = useAuth();
+  const { apiKey, currentUser } = useAuth();
+  const isAdmin = currentUser.role === 'admin';
   const { showError, showSuccess } = useToast();
   const searchParams = useSearchParams();
   const initialAgentId = searchParams.get('agentId');
@@ -515,7 +516,7 @@ function PlaygroundContent() {
     <div className="flex h-screen overflow-hidden bg-[var(--bg)] text-[var(--text)]">
       {/* Sidebar */}
       <aside
-        className={`flex shrink-0 flex-col border-r border-[var(--border)] bg-[#171717] transition-all duration-200 ${sidebarOpen ? 'w-[260px]' : 'w-0 overflow-hidden border-0'
+        className={`flex shrink-0 flex-col border-r border-[var(--border)] bg-[var(--panel)] transition-all duration-200 ${sidebarOpen ? 'w-[260px]' : 'w-0 overflow-hidden border-0'
           }`}
       >
         <div className="flex items-center gap-2 p-3">
@@ -543,7 +544,7 @@ function PlaygroundContent() {
             <label className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
               Agent
             </label>
-            <button
+            {isAdmin && <button
               type="button"
               onClick={openCreateAgentModal}
               className="flex items-center gap-1 text-[11px] font-medium text-[var(--text-muted)] hover:text-[var(--text)] transition"
@@ -551,10 +552,12 @@ function PlaygroundContent() {
             >
               <Plus className="h-3 w-3" />
               <span>New</span>
-            </button>
+            </button>}
           </div>
           {agents.length === 0 ? (
-            <button
+            !isAdmin ? (
+              <p className="px-1 text-xs text-[var(--text-muted)]">No agents assigned to you yet.</p>
+            ) : <button
               type="button"
               onClick={openCreateAgentModal}
               className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--text)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)] transition"
@@ -731,16 +734,16 @@ function PlaygroundContent() {
                 No Voice Agents Available
               </h1>
               <p className="mt-2.5 max-w-md text-sm text-[var(--text-muted)]">
-                To start chatting with realtime voice and testing tools in the playground, create your first agent now.
+                To start chatting with realtime voice and testing tools in the playground, {isAdmin ? 'create your first agent now.' : 'ask an admin to assign an agent to you.'}
               </p>
-              <button
+              {isAdmin && <button
                 type="button"
                 onClick={openCreateAgentModal}
                 className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 shadow-xl active:scale-95"
               >
                 <Plus className="h-4 w-4" />
                 Create New Agent
-              </button>
+              </button>}
             </div>
           ) : (
             <div className="relative flex h-full flex-col items-center justify-center px-4">
